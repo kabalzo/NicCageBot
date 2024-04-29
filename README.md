@@ -1,2 +1,4 @@
-# NicCageBot
-Discord bot that sends quotes and audio clips from Nic Cage movies. Also monitors a channel for repeat posts.
+# Nic_Cage_Soundboard
+This a bot using the discord.py API
+It is a rough proof of concept
+
