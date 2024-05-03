@@ -11,10 +11,10 @@ f = open("channels.txt", "r")
 channelIDs = f.readlines()
 #Channel that we're monitoring for repeat posts, check ref.txt
 #For me only, [0:1] is prod [2:3] is test
-getID = int(channelIDs[0])
+getID = int(channelIDs[2])
 
 #Channel that we send the repeat noticication message to, check ref.txt
-sendID = int(channelIDs[1])
+sendID = int(channelIDs[3])
 
 f.seek(0)
 f.close()
@@ -72,15 +72,12 @@ async def on_ready():
     async for message in channel.history(limit=None):
         # Check if message has content
         if (message.content is not None and message.content.startswith("https")):
-            if (message.content == "Link history has been logged"):
-                pass
-            else:
-                f = open("links.txt", "a")
-                # Add message content to list
-                #print(f'{message.content} - {message.created_at}')
-                f.write(message.content+"\n")
-                f.seek(0)
-                f.close()
+            f = open("links.txt", "a")
+            # Add message content to list
+            #print(f'{message.content} - {message.created_at}')
+            f.write(message.content+"\n")
+            f.seek(0)
+            f.close()
             
     print('\33[32m' + "Link history log complete" + '\33[0m')
     print("Listening for new links")
@@ -145,12 +142,12 @@ async def speak(ctx):
             try:
                 voice = ctx.voice_client.play(discord.FFmpegPCMAudio(str('./sounds/' + myQuote[1].strip())))
             except:
-                print('\33[31m' + "No active voice channel" + '\33[0m')
+                print('\33[31m' + "No active voice channel - Clip not played" + '\33[0m')
             break
 ################################################################################################################################################
 @bot.command()
 async def helpme(ctx):
-       await ctx.reply("Commands: !join !leave !speak !helpme !gif")
+       await ctx.reply("Commands: !join !qjoin !leave !qleave !speak !helpme !gif")
 ################################################################################################################################################
 @bot.command()
 async def gif(ctx):
@@ -164,14 +161,36 @@ async def join(ctx):
         await ctx.reply("Nic is here to party, woo! (!helpme)")
         voice.play(discord.FFmpegPCMAudio('./sounds/woo.mp3'))
     except:
-        print('\33[31m' + "No members active in voice channel" + '\33[0m')
+        print('\33[31m' + "No members active in voice channel - Channel not joined" + '\33[0m')
+        await ctx.reply("I can't join a voice channel without any active members")
+################################################################################################################################################
+@bot.command()
+async def qjoin(ctx):
+    try:
+        voice = await ctx.author.voice.channel.connect()
+        await ctx.reply("Nic is here to party, woo! (!helpme)")
+    except:
+        print('\33[31m' + "No members active in voice channel - Channel not joined" + '\33[0m')
+        await ctx.reply("I can't join a voice channel without any active members")
 ################################################################################################################################################
 @bot.command()
 async def leave(ctx):
-    voice = ctx.voice_client.play(discord.FFmpegPCMAudio('./sounds/silence.mp3'))
-    await ctx.reply("Hurray for the sounds of fucking silence")
-    time.sleep(5)
-    voice = await ctx.voice_client.disconnect()
+    try:
+        voice = ctx.voice_client.play(discord.FFmpegPCMAudio('./sounds/silence.mp3'))
+        await ctx.reply("Hurray for the sounds of fucking silence")
+        time.sleep(5)
+        voice = await ctx.voice_client.disconnect()
+    except:
+        await ctx.reply("I'm not in any channels genious")
+################################################################################################################################################
+@bot.command()
+async def qleave(ctx):
+    try:
+        await ctx.reply("Hurray for the sounds of fucking silence")
+        time.sleep(5)
+        voice = await ctx.voice_client.disconnect()
+    except:
+        await ctx.reply("I'm not in any channels genious")
 ################################################################################################################################################
 bot.run(TOKEN)
     
