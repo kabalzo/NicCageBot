@@ -7,22 +7,22 @@ import os
 from dotenv import load_dotenv
 import os
 
-#Bot Testing
-#getID = 1199174850955194428
-        
-#bot-testing
-#sendID = 1198772106305998919
-    
-#bestvid-of-the-week
-getID = 1074298607454400563
-        
-#oracle-room
-sendID = 381974064891428868
+f = open("channels.txt", "r")
+channelIDs = f.readlines()
+#Channel that we're monitoring for repeat posts
+getID = int(channelIDs[0])
+
+#Channel that we send the repeat noticication message to
+sendID = int(channelIDs[1])
+
+f.seek(0)
+f.close()
 
 #For use with start/stop.sh files instead of starting via shell
 pid = os.getpid()
 f = open("pid", "w")
 f.write(str(pid))
+f.seek(0)
 f.close()
 
 load_dotenv()
@@ -53,20 +53,19 @@ def getRandomInt():
      return i
 ################################################################################################################################################
 @bot.event
-async def on_ready(channel=None):
+async def on_ready():
     print("User name: " + bot.user.name)
     print("User id: " + str(bot.user.id))
     print('We have logged in as {0.user}\n'.format(bot))
     
+    #Clear out the previous history and rebuild it everytime the bot starts
     f = open("links.txt", "w")
     f.write("")
     f.seek(0)
     f.close()
-    # Check if channel argument is empty
-    if channel is None:
-        # if yes, use channel from the command
-        #channel = ctx.channel
-        channel = bot.get_channel(getID)
+    
+    #Get the channel from which to monitor repeat posts
+    channel = bot.get_channel(getID)
     
     async for message in channel.history(limit=None):
         # Check if message has content
@@ -81,13 +80,15 @@ async def on_ready(channel=None):
                 f.seek(0)
                 f.close()
             
-    print("Link history has been logged")
+    print('\33[32m' + "Link history has been logged" + '\33[0m')
+    print("Listening for links")
 ################################################################################################################################################
 @bot.event
 async def on_message(ctx):
-    if (ctx.content.startswith("!")):
+    if not(ctx.content.startswith("https")):
         pass
     else:
+        print("New link detected")
         sendTo = bot.get_channel(sendID)
         newLink = ctx.content
         try:
@@ -112,35 +113,8 @@ async def on_message(ctx):
                     else:
                         pass
         except:
-            print("Link history not created. Run !log command")
+            print('\33[31m' + "Link history not created." + '\33[0m')
     await bot.process_commands(ctx)
-################################################################################################################################################
-'''@bot.command()
-async def log(ctx, channel=None):
-    f = open("links.txt", "w")
-    f.write("")
-    f.seek(0)
-    f.close()
-    # Check if channel argument is empty
-    if channel is None:
-        # if yes, use channel from the command
-        #channel = ctx.channel
-        channel = bot.get_channel(getID)
-    
-    async for message in channel.history(limit=None):
-        # Check if message has content
-        if (message.content is not None and message.content.startswith("https")):
-            if (message.content == "Link history has been logged"):
-                pass
-            else:
-                f = open("links.txt", "a")
-                # Add message content to list
-                print(f'{message.content} - {message.created_at}')
-                f.write(message.content+"\n")
-                f.seek(0)
-                f.close()
-            
-    print("Link history has been logged")'''
 ################################################################################################################################################
 @bot.command()
 async def test(ctx, arg):
