@@ -10,10 +10,11 @@ import os
 f = open("channels.txt", "r")
 channelIDs = f.readlines()
 #Channel that we're monitoring for repeat posts, check ref.txt
-getID = int(channelIDs[2])
+#For me only, [0:1] is prod [2:3] is test
+getID = int(channelIDs[0])
 
 #Channel that we send the repeat noticication message to, check ref.txt
-sendID = int(channelIDs[3])
+sendID = int(channelIDs[1])
 
 f.seek(0)
 f.close()
@@ -39,7 +40,7 @@ NicCageQuotes = f.readlines()
 f.seek(0)
 f.close()
 
-#TOOD: change this
+#TODO: change this
 gifs = [
         "https://tenor.com/view/nicholas-cage-you-pointing-smoke-gif-14538102",
         "https://tenor.com/view/nicolas-cage-the-rock-smile-windy-handsome-gif-15812740",
@@ -67,6 +68,7 @@ async def on_ready():
     #Get the channel from which to monitor repeat posts
     channel = bot.get_channel(getID)
     
+    print("Starting link history log...")
     async for message in channel.history(limit=None):
         # Check if message has content
         if (message.content is not None and message.content.startswith("https")):
@@ -80,14 +82,13 @@ async def on_ready():
                 f.seek(0)
                 f.close()
             
-    print('\33[32m' + "Link history has been logged" + '\33[0m')
-    print("Listening for links")
+    print('\33[32m' + "Link history log complete" + '\33[0m')
+    print("Listening for new links")
 ################################################################################################################################################
 @bot.event
 async def on_message(ctx):
-    if not(ctx.content.startswith("https://youtube")):
-        pass
-    elif not(ctx.content.startswith("https://youtu.be")):
+    hasBeenPosted = False
+    if not((ctx.content.startswith("https://www.youtube.com")) or (ctx.content.startswith("https://youtu.be"))):
         pass
     else:
         print("New link detected")
@@ -100,20 +101,24 @@ async def on_message(ctx):
                 myLinks = f.readlines()
                 f.seek(0)
                 f.close()
+                
+                #Iterate through the saved links and search for repeats
+                #Linear in time, should change to a quicksort or something
                 for link in myLinks:
                     link = link.strip("\n")
                     #print(link)
                     if (link == newLink):
                         #print(f'{newLink} has previously been posted by {ctx.author.id}')
+                        print("Repeat link detected")
                         await sendTo.send(f'<@{ctx.author.id}> {newLink} has been posted previously')
+                        hasBeenPosted = True
                         break
-                    elif (newLink.startswith("https")):
-                        f = open("links.txt", "a")
-                        f.write(newLink+"\n")
-                        f.seek(0)
-                        f.close()
-                    else:
-                        pass
+                if (hasBeenPosted == False and newLink.startswith("https")):
+                    f = open("links.txt", "a")
+                    f.write(newLink+"\n")
+                    f.seek(0)
+                    f.close()
+                    print("New link: " + newLink + " has been logged")
         except:
             print('\33[31m' + "Link history not created." + '\33[0m')
     await bot.process_commands(ctx)
