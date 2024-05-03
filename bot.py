@@ -9,11 +9,11 @@ import os
 
 f = open("channels.txt", "r")
 channelIDs = f.readlines()
-#Channel that we're monitoring for repeat posts
-getID = int(channelIDs[0])
+#Channel that we're monitoring for repeat posts, check ref.txt
+getID = int(channelIDs[2])
 
-#Channel that we send the repeat noticication message to
-sendID = int(channelIDs[1])
+#Channel that we send the repeat noticication message to, check ref.txt
+sendID = int(channelIDs[3])
 
 f.seek(0)
 f.close()
@@ -85,7 +85,9 @@ async def on_ready():
 ################################################################################################################################################
 @bot.event
 async def on_message(ctx):
-    if not(ctx.content.startswith("https")):
+    if not(ctx.content.startswith("https://youtube")):
+        pass
+    elif not(ctx.content.startswith("https://youtu.be")):
         pass
     else:
         print("New link detected")
@@ -133,7 +135,7 @@ async def speak(ctx):
             _myQuote = NicCageQuotes[myRandomInt]
             myQuote = _myQuote.split("; ")
             print("Channel Name: " + str(ctx.channel.name) + ", Channel ID: " + str(ctx.channel.id))
-            await ctx.channel.send(myQuote[0])
+            await ctx.reply(myQuote[0])
             print('Quote: ' + '\33[32m' + myQuote[0] + '\33[0m')
             try:
                 voice = ctx.voice_client.play(discord.FFmpegPCMAudio(str('./sounds/' + myQuote[1].strip())))
@@ -143,18 +145,18 @@ async def speak(ctx):
 ################################################################################################################################################
 @bot.command()
 async def helpme(ctx):
-       await ctx.channel.send("Commands: !join !leave !speak !helpme !gif")
+       await ctx.reply("Commands: !join !leave !speak !helpme !gif")
 ################################################################################################################################################
 @bot.command()
 async def gif(ctx):
     randomGif = random.randint(0,3)
-    await ctx.channel.send(gifs[randomGif])
+    await ctx.reply(gifs[randomGif])
 ################################################################################################################################################
 @bot.command()
 async def join(ctx):
     try:
         voice = await ctx.author.voice.channel.connect()
-        await ctx.channel.send("Nic is here to party, woo! (!helpme)")
+        await ctx.reply("Nic is here to party, woo! (!helpme)")
         voice.play(discord.FFmpegPCMAudio('./sounds/woo.mp3'))
     except:
         print('\33[31m' + "No members active in voice channel" + '\33[0m')
@@ -162,7 +164,7 @@ async def join(ctx):
 @bot.command()
 async def leave(ctx):
     voice = ctx.voice_client.play(discord.FFmpegPCMAudio('./sounds/silence.mp3'))
-    await ctx.channel.send("Hurray for the sounds of fucking silence")
+    await ctx.reply("Hurray for the sounds of fucking silence")
     time.sleep(5)
     voice = await ctx.voice_client.disconnect()
 ################################################################################################################################################
