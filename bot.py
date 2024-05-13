@@ -1,19 +1,21 @@
 #This is my Nic Cage bot
 import random
 import time
+import re
 import discord
 from discord.ext import commands
 import os
 from dotenv import load_dotenv
-import os
 
 f = open("channels.txt", "r")
 channelIDs = f.readlines()
 #Channel that we're monitoring for repeat posts, check ref.txt
 #For me only, [0:1] is prod [2:3] is test
+#getID = int(channelIDs[0])
 getID = int(channelIDs[2])
 
 #Channel that we send the repeat noticication message to, check ref.txt
+#sendID = int(channelIDs[1])
 sendID = int(channelIDs[3])
 
 f.seek(0)
@@ -33,6 +35,7 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
 intents.message_content = True
 lastInt = -1
+vids = []
 
 #This is where the quotes and references to the sound clips live
 f = open("quotes.txt", "r")
@@ -59,12 +62,6 @@ async def on_ready():
     print("User id: " + str(bot.user.id))
     print('We have logged in as {0.user}\n'.format(bot))
     
-    #Clear out the previous history and rebuild it everytime the bot starts
-    f = open("links.txt", "w")
-    f.write("")
-    f.seek(0)
-    f.close()
-    
     #Get the channel from which to monitor repeat posts
     channel = bot.get_channel(getID)
     
@@ -72,52 +69,40 @@ async def on_ready():
     async for message in channel.history(limit=None):
         # Check if message has content
         if (message.content is not None and message.content.startswith("https")):
-            f = open("links.txt", "a")
-            # Add message content to list
-            #print(f'{message.content} - {message.created_at}')
-            f.write(message.content+"\n")
-            f.seek(0)
-            f.close()
+            #Get unique video ID with regex
+            #This only works for full desktop links, will need another regex for mobile/shorts
+            try:
+                videoID = re.findall("https://www.youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)", message.content)
+                videoID = videoID[0]
+                vids.append(videoID)
+                vids.sort()
+            except:
+                #Link doesn't match regex
+                pass
             
     print('\33[32m' + "Link history log complete" + '\33[0m')
     print("Listening for new links")
 ################################################################################################################################################
 @bot.event
 async def on_message(ctx):
-    hasBeenPosted = False
-    if not((ctx.content.startswith("https://www.youtube.com")) or (ctx.content.startswith("https://youtu.be"))):
+    #Only run checker if link in right channel and it is an https link from youtube
+    if not((ctx.content.startswith("https://www.youtube.com")) or (ctx.content.startswith("https://youtu.be")) and (ctx.channel.id == getID)):
         pass
     else:
         print("New link detected")
         sendTo = bot.get_channel(sendID)
         newLink = ctx.content
-        try:
-            if (ctx.channel.id == getID): 
-                #print(f'Message from {ctx.author} with  channel ID {ctx.channel.id}: {newLink}')
-                f = open("links.txt", "r")
-                myLinks = f.readlines()
-                f.seek(0)
-                f.close()
+        videoID = re.findall("https://www.youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)", newLink)
+        videoID = videoID[0]
+        
+        if (videoID in vids):
+            print('\33[33m' + "Repeat link detected" + '\33[0m')
+            await sendTo.send(f'<@{ctx.author.id}> {newLink} has been posted previously')
+        else:
+            vids.append(videoID)
+            vids.sort()
+            print("New link: " + newLink + " has been logged")
                 
-                #Iterate through the saved links and search for repeats
-                #Linear in time, should change to a quicksort or something
-                for link in myLinks:
-                    link = link.strip("\n")
-                    #print(link)
-                    if (link == newLink):
-                        #print(f'{newLink} has previously been posted by {ctx.author.id}')
-                        print("Repeat link detected")
-                        await sendTo.send(f'<@{ctx.author.id}> {newLink} has been posted previously')
-                        hasBeenPosted = True
-                        break
-                if (hasBeenPosted == False and newLink.startswith("https")):
-                    f = open("links.txt", "a")
-                    f.write(newLink+"\n")
-                    f.seek(0)
-                    f.close()
-                    print("New link: " + newLink + " has been logged")
-        except:
-            print('\33[31m' + "Link history not created." + '\33[0m')
     await bot.process_commands(ctx)
 ################################################################################################################################################
 @bot.command()
