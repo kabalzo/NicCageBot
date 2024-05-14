@@ -1,4 +1,4 @@
-#This is my Nic Cage bot
+#This is my Nic Cage bot, enjoy
 import random
 import time
 import re
@@ -35,7 +35,9 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
 intents.message_content = True
 lastInt = -1
-vids = []
+vids = {}
+count = 1
+rePatterns = ["https://www.youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)"]
 
 #This is where the quotes and references to the sound clips live
 f = open("quotes.txt", "r")
@@ -58,6 +60,7 @@ def getRandomInt():
 ################################################################################################################################################
 @bot.event
 async def on_ready():
+    global count
     print("User name: " + bot.user.name)
     print("User id: " + str(bot.user.id))
     print('We have logged in as {0.user}\n'.format(bot))
@@ -72,19 +75,20 @@ async def on_ready():
             #Get unique video ID with regex
             #This only works for full desktop links, will need another regex for mobile/shorts
             try:
-                videoID = re.findall("https://www.youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)", message.content)
-                videoID = videoID[0]
-                vids.append(videoID)
-                vids.sort()
+                videoID = (re.findall(rePatterns[0], message.content)[0]) or "Error"
+                vids.update({videoID : count})
+                count += 1
             except:
                 #Link doesn't match regex
+                print('\33[31m' + "Regex matching failed" + '\33[0m') #red text
                 pass
             
-    print('\33[32m' + "Link history log complete" + '\33[0m')
+    print('\33[32m' + "Link history log complete" + '\33[0m') #green text
     print("Listening for new links")
 ################################################################################################################################################
 @bot.event
 async def on_message(ctx):
+    global count
     #Only run checker if link in right channel and it is an https link from youtube
     if not((ctx.content.startswith("https://www.youtube.com")) or (ctx.content.startswith("https://youtu.be")) and (ctx.channel.id == getID)):
         pass
@@ -92,19 +96,31 @@ async def on_message(ctx):
         print("New link detected")
         sendTo = bot.get_channel(sendID)
         newLink = ctx.content
-        videoID = re.findall("https://www.youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)", newLink)
-        videoID = videoID[0]
         
-        if (videoID in vids):
-            print('\33[33m' + "Repeat link detected" + '\33[0m')
-            await sendTo.send(f'<@{ctx.author.id}> {newLink} has been posted previously')
+        #TODO: Add more regex handling for other types of links
+        
+        #This only matches https://www.youtube links
+        videoID = re.findall(rePatterns[0], newLink)
+        if len(videoID) == 0:
+            print('\33[31m' + "Regex matching failed" + '\33[0m') #red text
+        #print(videoID)
+    
         else:
-            vids.append(videoID)
-            vids.sort()
-            print("New link: " + newLink + " has been logged")
-                
+            videoID = videoID[0]
+            if (videoID in vids):
+                print('\33[33m' + "Repeat link detected" + '\33[0m') #yellow text
+                await sendTo.send(f'<@{ctx.author.id}> {newLink} has been posted previously')
+            else:
+                count += 1
+                vids.update({videoID : count})
+                print("New link: " + newLink + " has been logged")
+    
     await bot.process_commands(ctx)
+    
 ################################################################################################################################################
+'''All the commands to run from within discord chat below'''
+################################################################################################################################################
+
 @bot.command()
 async def test(ctx, arg):
     await ctx.send("Test command - CORRECT WAY " + arg)
