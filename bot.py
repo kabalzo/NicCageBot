@@ -37,7 +37,7 @@ intents.message_content = True
 lastInt = -1
 vids = {}
 count = 1
-rePatterns = ["https://www.youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)"]
+rePatterns = ["https://www.youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)", "https://youtu.be/([a-zA-Z0-9\_\-]+)\?.+"]
 
 #This is where the quotes and references to the sound clips live
 f = open("quotes.txt", "r")
@@ -73,15 +73,14 @@ async def on_ready():
         # Check if message has content
         if (message.content is not None and message.content.startswith("https")):
             #Get unique video ID with regex
-            #This only works for full desktop links, will need another regex for mobile/shorts
-            try:
-                videoID = (re.findall(rePatterns[0], message.content)[0]) or "Error"
-                vids.update({videoID : count})
-                count += 1
-            except:
-                #Link doesn't match regex
-                print('\33[31m' + "Regex matching failed" + '\33[0m') #red text
-                pass
+            for pattern in rePatterns:
+                try:
+                    videoID = (re.findall(pattern, message.content)[0])
+                    #print(f"Logged {videoID}")
+                    vids.update({videoID : count})
+                    count += 1
+                except:
+                    pass
             
     print('\33[32m' + "Link history log complete" + '\33[0m') #green text
     print("Listening for new links")
@@ -97,23 +96,18 @@ async def on_message(ctx):
         sendTo = bot.get_channel(sendID)
         newLink = ctx.content
         
-        #TODO: Add more regex handling for other types of links
-        
-        #This only matches https://www.youtube links
-        videoID = re.findall(rePatterns[0], newLink)
-        if len(videoID) == 0:
-            print('\33[31m' + "Regex matching failed" + '\33[0m') #red text
-        #print(videoID)
-    
-        else:
-            videoID = videoID[0]
-            if (videoID in vids):
-                print('\33[33m' + "Repeat link detected" + '\33[0m') #yellow text
-                await sendTo.send(f'<@{ctx.author.id}> {newLink} has been posted previously')
-            else:
-                count += 1
-                vids.update({videoID : count})
-                print("New link: " + newLink + " has been logged")
+        for pattern in rePatterns:
+            try:
+                videoID = re.findall(pattern, newLink)[0]
+                if (videoID in vids):
+                    print('\33[33m' + "Repeat link detected" + '\33[0m') #yellow text
+                    await sendTo.send(f'<@{ctx.author.id}> {newLink} has been posted previously')
+                else:
+                    count += 1
+                    vids.update({videoID : count})
+                    print("New link: " + newLink + " has been logged")
+            except:
+                pass
     
     await bot.process_commands(ctx)
     
