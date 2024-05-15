@@ -85,29 +85,41 @@ async def on_ready():
     print('\33[32m' + "Link history log complete" + '\33[0m') #green text
     print("Listening for new links")
 ################################################################################################################################################
+def checkLink(link, pattern):
+    global count
+    global sendTo
+    print("New link detected")
+    sendTo = bot.get_channel(sendID)
+    videoID = re.findall(pattern, link)[0]
+    #Video was posted before, notify poster
+    if (videoID in vids):
+        print('\33[33m' + "Repeat link detected" + '\33[0m') #yellow text
+        return True
+    #Video not posted before, add video to log
+    else:
+        count += 1
+        vids.update({videoID : count})
+        print("New link: " + link + " has been logged")
+        return False
+        
 @bot.event
 async def on_message(ctx):
-    global count
-    #Only run checker if link in right channel and it is an https link from youtube
-    if not((ctx.content.startswith("https://www.youtube.com")) or (ctx.content.startswith("https://youtu.be")) and (ctx.channel.id == getID)):
-        pass
-    else:
-        print("New link detected")
-        sendTo = bot.get_channel(sendID)
-        newLink = ctx.content
-        
-        for pattern in rePatterns:
-            try:
-                videoID = re.findall(pattern, newLink)[0]
-                if (videoID in vids):
-                    print('\33[33m' + "Repeat link detected" + '\33[0m') #yellow text
-                    await sendTo.send(f'<@{ctx.author.id}> {newLink} has been posted previously')
-                else:
-                    count += 1
-                    vids.update({videoID : count})
-                    print("New link: " + newLink + " has been logged")
-            except:
-                pass
+    newLink = ctx.content
+    author = ctx.author.id
+    alertMessage = f'<@{author}> {newLink} has been posted previously'
+    #Message is from correct channel we want to monitor
+    if ctx.channel.id == getID:
+        #Regex link matching on first pattern
+        if ctx.content.startswith("https://www.youtube.com"):
+            repeat = checkLink(newLink, rePatterns[0])
+            if repeat == True:
+                await sendTo.send(alertMessage)
+                
+        #Regex link matching on second pattern        
+        elif ctx.content.startswith("https://youtu.be"):
+            repeat = checkLink(newLink, rePatterns[1])
+            if repeat == True:
+                await sendTo.send(alertMessage)
     
     await bot.process_commands(ctx)
     
