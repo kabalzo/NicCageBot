@@ -1,3 +1,5 @@
 *.env
 *.exe
 *.txt
+testing.py
+*.cfg

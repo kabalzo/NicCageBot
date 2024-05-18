@@ -23,7 +23,7 @@ f.close()
 
 #For use with start/stop.sh files instead of starting via shell
 pid = os.getpid()
-f = open("pid", "w")
+f = open("pid.txt", "w")
 f.write(str(pid))
 f.seek(0)
 f.close()
@@ -37,7 +37,18 @@ intents.message_content = True
 lastInt = -1
 vids = {}
 count = 1
-rePatterns = ["https://www.youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)", "https://youtu.be/([a-zA-Z0-9\_\-]+)\?.+"]
+youtubeNormalPattern = "https://www.youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)"
+youtubeMobilePattern = "https://youtu.be/([a-zA-Z0-9\_\-]+)\?.+"
+youtubeShortsPattern1 = "https://www.youtube.com/shorts/([a-zA-Z0-9\_\-]+)"
+youtubeShortsPattern2 = "https://youtube.com/shorts/([a-zA-Z0-9\_\-]+)\?.*"
+rePatterns = [youtubeNormalPattern, youtubeMobilePattern, youtubeShortsPattern1, youtubeShortsPattern2]
+
+BEG_GREEN = '\33[32m'
+END_GREEN = '\33[0m'
+BEG_YELLOW = '\33[33m'
+END_YELLOW = '\33[0m'
+BEG_RED = '\33[31m'
+END_RED = '\33[0m'
 
 #This is where the quotes and references to the sound clips live
 f = open("quotes.txt", "r")
@@ -60,46 +71,76 @@ def getRandomInt():
 ################################################################################################################################################
 @bot.event
 async def on_ready():
+    #Get the channel from which to monitor repeat posts
+    channel = bot.get_channel(getID)
     global count
+    
     print("User name: " + bot.user.name)
     print("User id: " + str(bot.user.id))
     print('We have logged in as {0.user}\n'.format(bot))
-    
-    #Get the channel from which to monitor repeat posts
-    channel = bot.get_channel(getID)
-    
     print("Starting link history log...")
+    
     async for message in channel.history(limit=None):
+        newMessage = message.content
+        vidIDnormal = re.findall(youtubeNormalPattern, newMessage)
+        #print(vidIDnormal)
+        vidIDmobile = re.findall(youtubeMobilePattern, newMessage)
+        #print(vidIDmobile)
+        vidIDshort1 = re.findall(youtubeShortsPattern1, newMessage)
+        #print(vidIDshort1)
+        vidIDshort2 = re.findall(youtubeShortsPattern2, newMessage)
+        #print(vidIDshort2)
         # Check if message has content
-        if (message.content is not None and message.content.startswith("https")):
-            #Get unique video ID with regex
-            for pattern in rePatterns:
-                try:
-                    videoID = (re.findall(pattern, message.content)[0])
-                    #print(f"Logged {videoID}")
-                    vids.update({videoID : count})
-                    count += 1
-                except:
-                    pass
+        if (newMessage is not None):
+            #Do nothing if not a weblink
+            if not newMessage.startswith("https"):
+                pass
+            #Conditon for a regular YT link (www.youtube.com)
+            elif len(vidIDnormal) == 1:
+                vids.update({vidIDnormal[0] : count})
+                count += 1
+                print(BEG_GREEN + f'Logged {vidIDnormal[0]}' + END_GREEN)
+               
+            #Condition for a mobile link (www.youtu.be)
+            elif len(vidIDmobile) == 1:
+                vids.update({vidIDmobile[0] : count})
+                count += 1
+                print(BEG_GREEN + f'Logged {vidIDmobile[0]}' + END_GREEN)
+                    
+            #Condition for a shorts link (www.youtube.com/shorts)
+            #Possible shorts link type 1
+            elif len(vidIDshort1) == 1:
+                vids.update({vidIDshort1[0] : count})
+                count += 1
+                print(BEG_GREEN + f'Logged {vidIDshort1[0]}' + END_GREEN)
+
+            #Possible shorts link type 2
+            elif len(vidIDshort2) == 1:
+                vids.update({vidIDshort2[0] : count})
+                count += 1
+                print(BEG_GREEN + f'Logged {vidIDshort2[0]}' + END_GREEN)
             
-    print('\33[32m' + "Link history log complete" + '\33[0m') #green text
+            else:
+                print(BEG_RED + f'Unsupported link type {newMessage}' + END_RED)
+                
+    print("Link history log complete")
     print("Listening for new links")
 ################################################################################################################################################
-def checkLink(link, pattern):
+def checkLink(vidID):
     global count
     global sendTo
-    print("New link detected")
+    print(f"New link with unique ID: '{vidID}' detected")
     sendTo = bot.get_channel(sendID)
-    videoID = re.findall(pattern, link)[0]
+
     #Video was posted before, notify poster
-    if (videoID in vids):
-        print('\33[33m' + "Repeat link detected" + '\33[0m') #yellow text
+    if (vidID in vids):
+        print(BEG_YELLOW + "Repeat link detected" + END_YELLOW) #yellow text
         return True
     #Video not posted before, add video to log
     else:
         count += 1
-        vids.update({videoID : count})
-        print("New link: " + link + " has been logged")
+        vids.update({vidID : count})
+        print(f"New link: '{vidID}' has been logged")
         return False
         
 @bot.event
@@ -109,17 +150,16 @@ async def on_message(ctx):
     alertMessage = f'<@{author}> {newLink} has been posted previously'
     #Message is from correct channel we want to monitor
     if ctx.channel.id == getID:
-        #Regex link matching on first pattern
-        if ctx.content.startswith("https://www.youtube.com"):
-            repeat = checkLink(newLink, rePatterns[0])
-            if repeat == True:
-                await sendTo.send(alertMessage)
-                
-        #Regex link matching on second pattern        
-        elif ctx.content.startswith("https://youtu.be"):
-            repeat = checkLink(newLink, rePatterns[1])
-            if repeat == True:
-                await sendTo.send(alertMessage)
+        vidID = ""
+        for pattern in rePatterns:
+            checkPattern = re.findall(pattern, newLink)
+            if (len(checkPattern) != 0):
+                vidID = checkPattern[0]
+                break
+       
+        repeat = checkLink(vidID)
+        if repeat == True:
+            await sendTo.send(alertMessage)
     
     await bot.process_commands(ctx)
     
@@ -145,11 +185,11 @@ async def speak(ctx):
             myQuote = _myQuote.split("; ")
             print("Channel Name: " + str(ctx.channel.name) + ", Channel ID: " + str(ctx.channel.id))
             await ctx.reply(myQuote[0])
-            print('Quote: ' + '\33[32m' + myQuote[0] + '\33[0m')
+            print('Quote: ' + BEG_GREEN + myQuote[0] + END_GREEN)
             try:
                 voice = ctx.voice_client.play(discord.FFmpegPCMAudio(str('./sounds/' + myQuote[1].strip())))
             except:
-                print('\33[31m' + "No active voice channel - Clip not played" + '\33[0m')
+                print(BEG_RED + "No active voice channel - Clip not played" + END_RED)
             break
 ################################################################################################################################################
 @bot.command()
@@ -168,7 +208,7 @@ async def join(ctx):
         await ctx.reply("Nic is here to party, woo! (!helpme)")
         voice.play(discord.FFmpegPCMAudio('./sounds/woo.mp3'))
     except:
-        print('\33[31m' + "No members active in voice channel - Channel not joined" + '\33[0m')
+        print(BEG_RED + "No members active in voice channel - Channel not joined" + END_RED)
         await ctx.reply("I can't join a voice channel without any active members")
 ################################################################################################################################################
 @bot.command()
@@ -177,7 +217,7 @@ async def qjoin(ctx):
         voice = await ctx.author.voice.channel.connect()
         await ctx.reply("Nic is here to party, woo! (!helpme)")
     except:
-        print('\33[31m' + "No members active in voice channel - Channel not joined" + '\33[0m')
+        print(BEG_RED + "No members active in voice channel - Channel not joined" + END_RED)
         await ctx.reply("I can't join a voice channel without any active members")
 ################################################################################################################################################
 @bot.command()

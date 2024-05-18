@@ -1,3 +1,3 @@
 #!/bin/bash
-read < pid
+read < pid.txt
 kill $(($REPLY))
