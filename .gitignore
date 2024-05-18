@@ -3,3 +3,6 @@
 *.txt
 testing.py
 *.cfg
+lib64
+*.out
+pid
