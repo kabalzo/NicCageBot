@@ -11,12 +11,12 @@ f = open("channels.txt", "r")
 channelIDs = f.readlines()
 #Channel that we're monitoring for repeat posts, check ref.txt
 #For me only, [0:1] is prod [2:3] is test
-#getID = int(channelIDs[0])
-getID = int(channelIDs[2])
+getID = int(channelIDs[0])
+#getID = int(channelIDs[2])
 
 #Channel that we send the repeat noticication message to, check ref.txt
-#sendID = int(channelIDs[1])
-sendID = int(channelIDs[3])
+sendID = int(channelIDs[1])
+#sendID = int(channelIDs[3])
 
 f.seek(0)
 f.close()
@@ -38,10 +38,11 @@ lastInt = -1
 vids = {}
 count = 1
 youtubeNormalPattern = "https://www.youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)"
-youtubeMobilePattern = "https://youtu.be/([a-zA-Z0-9\_\-]+)\?.+"
+youtubeMobilePattern1 = "https://youtu.be/([a-zA-Z0-9\_\-]+)\?.+"
+youtubeMobilePattern2 = "https://youtu.be/([a-zA-Z0-9\_\-]+)"
 youtubeShortsPattern1 = "https://www.youtube.com/shorts/([a-zA-Z0-9\_\-]+)"
 youtubeShortsPattern2 = "https://youtube.com/shorts/([a-zA-Z0-9\_\-]+)\?.*"
-rePatterns = [youtubeNormalPattern, youtubeMobilePattern, youtubeShortsPattern1, youtubeShortsPattern2]
+rePatterns = [youtubeNormalPattern, youtubeMobilePattern1, youtubeMobilePattern2, youtubeShortsPattern1, youtubeShortsPattern2]
 
 BEG_GREEN = '\33[32m'
 END_GREEN = '\33[0m'
@@ -84,8 +85,10 @@ async def on_ready():
         newMessage = message.content
         vidIDnormal = re.findall(youtubeNormalPattern, newMessage)
         #print(vidIDnormal)
-        vidIDmobile = re.findall(youtubeMobilePattern, newMessage)
-        #print(vidIDmobile)
+        vidIDmobile1 = re.findall(youtubeMobilePattern1, newMessage)
+        #print(vidIDmobile1)
+        vidIDmobile2 = re.findall(youtubeMobilePattern2, newMessage)
+        #print(vidIDmobil2)
         vidIDshort1 = re.findall(youtubeShortsPattern1, newMessage)
         #print(vidIDshort1)
         vidIDshort2 = re.findall(youtubeShortsPattern2, newMessage)
@@ -102,10 +105,18 @@ async def on_ready():
                 print(BEG_GREEN + f'Logged {vidIDnormal[0]}' + END_GREEN)
                
             #Condition for a mobile link (www.youtu.be)
-            elif len(vidIDmobile) == 1:
-                vids.update({vidIDmobile[0] : count})
+            #Possible mobile link type 1
+            elif len(vidIDmobile1) == 1:
+                vids.update({vidIDmobile1[0] : count})
                 count += 1
-                print(BEG_GREEN + f'Logged {vidIDmobile[0]}' + END_GREEN)
+                print(BEG_GREEN + f'Logged {vidIDmobile1[0]}' + END_GREEN)
+
+            #Condition for a mobile link (www.youtu.be)
+            #Possible mobile link type 2
+            elif len(vidIDmobile2) == 1:
+                vids.update({vidIDmobile2[0] : count})
+                count += 1
+                print(BEG_GREEN + f'Logged {vidIDmobile2[0]}' + END_GREEN)
                     
             #Condition for a shorts link (www.youtube.com/shorts)
             #Possible shorts link type 1
