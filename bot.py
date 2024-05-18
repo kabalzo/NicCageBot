@@ -7,20 +7,59 @@ from discord.ext import commands
 import os
 from dotenv import load_dotenv
 
+#Colors for shell print statements
+BEG_GREEN = '\33[32m'
+END_GREEN = '\33[0m'
+BEG_YELLOW = '\33[33m'
+END_YELLOW = '\33[0m'
+BEG_RED = '\33[31m'
+END_RED = '\33[0m'
+
+#Channel IDs of the two channels in our discord that I use to implement this bot
 f = open("channels.txt", "r")
 channelIDs = f.readlines()
-#Channel that we're monitoring for repeat posts, check ref.txt
-#For me only, [0:1] is prod [2:3] is test
-#getID = int(channelIDs[0])
-getID = int(channelIDs[2])
-
-#Channel that we send the repeat noticication message to, check ref.txt
-#sendID = int(channelIDs[1])
-sendID = int(channelIDs[3])
-
 f.seek(0)
 f.close()
 
+#Channel that we're monitoring for repeat posts
+getID = 0
+sendID = 0
+
+#These are for the menu
+#For me only, [0:1] is prod [2:3] is test
+getIDprod = int(channelIDs[0])
+getIDtest = int(channelIDs[2])
+
+#Channel that we send the repeat noticication message to, check ref.txt
+sendIDprod = int(channelIDs[1])
+sendIDtest = int(channelIDs[3])
+
+#Menu to launch program from shell
+while True:
+    user_input = input("Run bot in PROD [1] or Run bot in TEST [2] Exit the program [0]")
+    try:
+        user_input = int(user_input)
+    except:
+        print(BEG_RED + 'Invalid selection. Try again.' + END_RED)
+        continue
+    
+    if user_input == 1:
+        getID = getIDprod
+        sendID = sendIDprod
+        print("Starting bot in main channels")
+        break
+    elif user_input == 2:
+        getID = getIDtest
+        sendID = sendIDtest
+        print("Starting bot in test channels")
+        break
+    elif user_input == 0:
+        print("Goodbye")
+        time.sleep(5)
+        quit()
+    else:
+        print(BEG_RED + 'Invalid selection. Try again.' + END_RED)
+        
 #For use with start/stop.sh files instead of starting via shell
 pid = os.getpid()
 f = open("pid.txt", "w")
@@ -44,13 +83,6 @@ youtubeMobilePattern2 = "https://youtu.be/([a-zA-Z0-9\_\-]+)"
 youtubeShortsPattern1 = "https://www.youtube.com/shorts/([a-zA-Z0-9\_\-]+)"
 youtubeShortsPattern2 = "https://youtube.com/shorts/([a-zA-Z0-9\_\-]+)\?.*"
 rePatterns = [youtubeDefaultPattern1, youtubeDefaultPattern2, youtubeMobilePattern1, youtubeMobilePattern2, youtubeShortsPattern1, youtubeShortsPattern2]
-
-BEG_GREEN = '\33[32m'
-END_GREEN = '\33[0m'
-BEG_YELLOW = '\33[33m'
-END_YELLOW = '\33[0m'
-BEG_RED = '\33[31m'
-END_RED = '\33[0m'
 
 #This is where the quotes and references to the sound clips live
 f = open("quotes.txt", "r")
