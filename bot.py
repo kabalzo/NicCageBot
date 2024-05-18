@@ -7,6 +7,18 @@ from discord.ext import commands
 import os
 from dotenv import load_dotenv
 
+#Channel IDs of the two channels in our discord that I use to implement this bot
+f = open("channels.txt", "r")
+channelIDs = f.readlines()
+f.seek(0)
+f.close()
+
+#This is where the quotes and references to the sound clips live
+f = open("quotes.txt", "r")
+NicCageQuotes = f.readlines()
+f.seek(0)
+f.close()
+
 #Colors for shell print statements
 BEG_GREEN = '\33[32m'
 END_GREEN = '\33[0m'
@@ -14,12 +26,34 @@ BEG_YELLOW = '\33[33m'
 END_YELLOW = '\33[0m'
 BEG_RED = '\33[31m'
 END_RED = '\33[0m'
+BEG_BLUE = '\33[44m'
+END_BLUE = '\33[0m'
 
-#Channel IDs of the two channels in our discord that I use to implement this bot
-f = open("channels.txt", "r")
-channelIDs = f.readlines()
-f.seek(0)
-f.close()
+load_dotenv()
+TOKEN = os.getenv("DISCORD_TOKEN")
+
+intents = discord.Intents.all()
+bot = commands.Bot(command_prefix='!', intents=intents)
+intents.message_content = True
+
+lastInt = -1
+vids = {}
+link_count = 1
+defaultPattern1 = "https://www.youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)"
+defaultPattern2 = "https://youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)[\&].*"
+mobilePattern1 = "https://youtu.be/([a-zA-Z0-9\_\-]+)\?.+"
+mobilePattern2 = "https://youtu.be/([a-zA-Z0-9\_\-]+)"
+shortsPattern1 = "https://www.youtube.com/shorts/([a-zA-Z0-9\_\-]+)"
+shortsPattern2 = "https://youtube.com/shorts/([a-zA-Z0-9\_\-]+)\?.*"
+rePatterns = [defaultPattern1, defaultPattern2, mobilePattern1, mobilePattern2, shortsPattern1, shortsPattern2]
+
+#TODO: change this
+gifs = [
+        "https://tenor.com/view/nicholas-cage-you-pointing-smoke-gif-14538102",
+        "https://tenor.com/view/nicolas-cage-the-rock-smile-windy-handsome-gif-15812740",
+        "https://tenor.com/view/woo-nick-cage-nicolas-cage-the-unbearable-weight-of-massive-talent-lets-go-gif-25135470",
+        "https://tenor.com/view/national-treasure-benjamin-gates-nicolas-cage-declaration-of-independence-steal-gif-4752081"
+        ]
 
 #Channel that we're monitoring for repeat posts
 getID = 0
@@ -61,58 +95,25 @@ while True:
         print(BEG_RED + 'Invalid selection. Try again.' + END_RED)
         
 #For use with start/stop.sh files instead of starting via shell
-pid = os.getpid()
+#Will not work with menu block
+'''pid = os.getpid()
 f = open("pid.txt", "w")
 f.write(str(pid))
 f.seek(0)
-f.close()
+f.close()'''
 
-load_dotenv()
-TOKEN = os.getenv("DISCORD_TOKEN")
-
-intents = discord.Intents.all()
-bot = commands.Bot(command_prefix='!', intents=intents)
-intents.message_content = True
-lastInt = -1
-vids = {}
-count = 1
-youtubeDefaultPattern1 = "https://www.youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)"
-youtubeDefaultPattern2 = "https://youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)[\&].*"
-youtubeMobilePattern1 = "https://youtu.be/([a-zA-Z0-9\_\-]+)\?.+"
-youtubeMobilePattern2 = "https://youtu.be/([a-zA-Z0-9\_\-]+)"
-youtubeShortsPattern1 = "https://www.youtube.com/shorts/([a-zA-Z0-9\_\-]+)"
-youtubeShortsPattern2 = "https://youtube.com/shorts/([a-zA-Z0-9\_\-]+)\?.*"
-rePatterns = [youtubeDefaultPattern1, youtubeDefaultPattern2, youtubeMobilePattern1, youtubeMobilePattern2, youtubeShortsPattern1, youtubeShortsPattern2]
-
-#This is where the quotes and references to the sound clips live
-f = open("quotes.txt", "r")
-NicCageQuotes = f.readlines()
-f.seek(0)
-f.close()
-
-#TODO: change this
-gifs = [
-        "https://tenor.com/view/nicholas-cage-you-pointing-smoke-gif-14538102",
-        "https://tenor.com/view/nicolas-cage-the-rock-smile-windy-handsome-gif-15812740",
-        "https://tenor.com/view/woo-nick-cage-nicolas-cage-the-unbearable-weight-of-massive-talent-lets-go-gif-25135470",
-        "https://tenor.com/view/national-treasure-benjamin-gates-nicolas-cage-declaration-of-independence-steal-gif-4752081"
-        ]
-################################################################################################################################################
-#Play a random clip each time !speak is called
-def getRandomInt():
-     i = random.randint(0, len(NicCageQuotes)-1)
-     return i
 ################################################################################################################################################
 @bot.event
 async def on_ready():
     #Get the channel from which to monitor repeat posts
+    start_time = time.time()
     channel = bot.get_channel(getID)
-    global count
+    global link_count
     
     print("User name: " + bot.user.name)
     print("User id: " + str(bot.user.id))
     print('We have logged in as {0.user}\n'.format(bot))
-    print("Starting link history log...")
+    print(BEG_BLUE + "Starting link history log..." + END_BLUE + "\n")
     
     async for message in channel.history(limit=None):
         newMessage = message.content
@@ -125,19 +126,22 @@ async def on_ready():
                 
                 if (len(vidID) == 1):
                     isGoodLink = True
-                    vids.update({vidID[0] : count})
-                    count += 1
-                    print(BEG_GREEN + f'Logged {vidID[0]}' + END_GREEN)
+                    vids.update({vidID[0] : link_count})
+                    link_count += 1
+                    #Uncomment this line to see print out of how messages were handled
+                    #print(BEG_GREEN + f'Logged {vidID[0]}' + END_GREEN)
                     break
                         
             if isGoodLink == False:
                 print(BEG_RED + f'Unsupported link type {newMessage}' + END_RED)
-            
-    print("Link history log complete")
-    print("Listening for new links")
+                
+    end_time = time.time()
+    log_time = end_time - start_time
+    print(BEG_BLUE +f'Finished logging {link_count} links in {log_time:.2f}s' + END_BLUE)
+    print("Listening for new links\n")
 ################################################################################################################################################
 def checkLink(vidID):
-    global count
+    global link_count
     global sendTo
     print(f"New link with unique ID: '{vidID}' detected")
     sendTo = bot.get_channel(sendID)
@@ -148,8 +152,8 @@ def checkLink(vidID):
         return True
     #Video not posted before, add video to log
     else:
-        count += 1
-        vids.update({vidID : count})
+        link_count += 1
+        vids.update({vidID : link_count})
         print(f"New link: '{vidID}' has been logged")
         return False
         
@@ -181,6 +185,11 @@ async def on_message(ctx):
 async def test(ctx, arg):
     await ctx.send("Test command - CORRECT WAY " + arg)
 ################################################################################################################################################
+#Play a random clip each time !speak is called
+def getRandomInt():
+     i = random.randint(0, len(NicCageQuotes)-1)
+     return i
+
 @bot.command()
 async def speak(ctx):
     global lastInt
