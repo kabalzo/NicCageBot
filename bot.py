@@ -46,6 +46,7 @@ mobilePattern2 = "https://youtu.be/([a-zA-Z0-9\_\-]+)"
 shortsPattern1 = "https://www.youtube.com/shorts/([a-zA-Z0-9\_\-]+)"
 shortsPattern2 = "https://youtube.com/shorts/([a-zA-Z0-9\_\-]+)\?.*"
 rePatterns = [defaultPattern1, defaultPattern2, mobilePattern1, mobilePattern2, shortsPattern1, shortsPattern2]
+date_format = "%a, %b %d %Y"
 
 #TODO: change this
 gifs = [
@@ -108,6 +109,7 @@ async def on_ready():
     #Get the channel from which to monitor repeat posts
     start_time = time.time()
     channel = bot.get_channel(getID)
+    global date_format
     global link_count
     
     print("User name: " + bot.user.name)
@@ -117,6 +119,9 @@ async def on_ready():
     
     async for message in channel.history(limit=None):
         newMessage = message.content
+        author_name = message.author
+        author_id = message.author.id
+        creation_date = message.created_at.strftime(date_format)
         isGoodLink = False
         
         if (newMessage is not None and newMessage.startswith("https")):
@@ -126,10 +131,11 @@ async def on_ready():
                 
                 if (len(vidID) == 1):
                     isGoodLink = True
-                    vids.update({vidID[0] : link_count})
+                    log_item = [link_count, author_name, author_id, creation_date]
+                    vids.update({vidID[0] : log_item})
                     link_count += 1
                     #Uncomment this line to see print out of how messages were handled
-                    #print(BEG_GREEN + f'Logged {vidID[0]}' + END_GREEN)
+                    print(BEG_GREEN + f'Message logged - ID: {vidID[0]}, posted by {author_name} on {creation_date}' + END_GREEN)
                     break
                         
             if isGoodLink == False:
@@ -140,9 +146,13 @@ async def on_ready():
     print(BEG_BLUE +f'Finished logging {link_count} links in {log_time:.2f}s' + END_BLUE)
     print("Listening for new links\n")
 ################################################################################################################################################
-def checkLink(vidID):
+def checkLink(info):
     global link_count
     global sendTo
+    vidID = info[0]
+    author_name = info[1]
+    author_id = info[2]
+    creation_date = info[3]
     print(f"New link with unique ID: '{vidID}' detected")
     sendTo = bot.get_channel(sendID)
 
@@ -153,15 +163,19 @@ def checkLink(vidID):
     #Video not posted before, add video to log
     else:
         link_count += 1
-        vids.update({vidID : link_count})
+        log_item = [link_count, author_name, author_id, creation_date]
+        vids.update({vidID : log_item})
         print(f"New link: '{vidID}' has been logged")
         return False
         
 @bot.event
 async def on_message(ctx):
+    global date_format
     newLink = ctx.content
-    author = ctx.author.id
-    alertMessage = f'<@{author}> {newLink} has been posted previously'
+    author_id = ctx.author.id
+    author_name = ctx.author
+    creation_date = ctx.created_at.strftime(date_format)
+    #alertMessage = f'<@{author_id}> {newLink} has been posted previously'
     #Message is from correct channel we want to monitor
     if ctx.channel.id == getID:
         vidID = ""
@@ -169,11 +183,13 @@ async def on_message(ctx):
             checkPattern = re.findall(pattern, newLink)
             if (len(checkPattern) != 0):
                 vidID = checkPattern[0]
+                info = [vidID, author_name, author_id, creation_date]
                 break
        
-        repeat = checkLink(vidID)
+        repeat = checkLink(info)
         if repeat == True:
-            await sendTo.send(alertMessage)
+            og_info = vids[vidID]
+            await sendTo.send(f'<@{author_id}> {newLink} was posted by <@{og_info[2]}> on {og_info[3]}')
     
     await bot.process_commands(ctx)
     
