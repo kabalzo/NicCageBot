@@ -6,6 +6,7 @@ import discord
 from discord.ext import commands
 import os
 from dotenv import load_dotenv
+import datetime
 
 #Channel IDs of the two channels in our discord that I use to implement this bot
 f = open("channels.txt", "r")
@@ -28,6 +29,8 @@ BEG_RED = '\33[31m'
 END_RED = '\33[0m'
 BEG_BLUE = '\33[44m'
 END_BLUE = '\33[0m'
+BEG_FLASH = '\33[5m'
+END_FLASH = '\33[0m'
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -71,7 +74,7 @@ sendIDtest = int(channelIDs[3])
 
 #Menu to launch program from shell
 while True:
-    user_input = input("Run bot in PROD [1] or Run bot in TEST [2] Exit the program [0]")
+    user_input = input("Run bot in PROD [1] or Run bot in TEST [2] Exit the program [0]: ")
     try:
         user_input = int(user_input)
     except:
@@ -104,8 +107,27 @@ f.seek(0)
 f.close()'''
 
 ################################################################################################################################################
+def calculateTimeToWinner():
+    myTime = datetime.datetime.today()
+    day = myTime.weekday()
+    daysReference = [[0, 6, "Monday"], [1, 4, "Tuesday"], [2, 2, "Wednesday"], [3, 0, "Thursday"], [4, -2, "Friday"], [5, -4, "Saturday"], [6, 1, "Sunday"]]
+    
+    for ref in daysReference:
+        if day == ref[0]:
+            day += ref[1]
+            #print(f'It\'s {ref[2]} - {day}')
+            break
+    
+    #Will alert at 1am Sundays
+    winner_time = (day*86400) - (myTime.hour*3600) - (myTime.minute*60) + 3600
+    
+    print(f'Waiting {winner_time}s until next winner announced')
+    #print("Bot startup time: " + str(hour) + " " + str(minute) + " " + str(day))
+    
+    
 @bot.event
 async def on_ready():
+    calculateTimeToWinner()
     #Get the channel from which to monitor repeat posts
     start_time = time.time()
     channel = bot.get_channel(getID)
@@ -122,6 +144,14 @@ async def on_ready():
         author_name = message.author
         author_id = message.author.id
         creation_date = message.created_at.strftime(date_format)
+        reactions = message.reactions
+        reactionCount = 0
+        if len(reactions) != 0:
+            for reaction in reactions:
+                #print(reactions)
+                #print(type(reactions[0]))
+                #print(reactions[0].count)
+                reactionCount += reaction.count
         isGoodLink = False
         
         if (newMessage is not None and newMessage.startswith("https")):
@@ -135,7 +165,7 @@ async def on_ready():
                     vids.update({vidID[0] : log_item})
                     link_count += 1
                     #Uncomment this line to see print out of how messages were handled
-                    print(BEG_GREEN + f'Message logged - ID: {vidID[0]}, posted by {author_name} on {creation_date}' + END_GREEN)
+                    #print(BEG_GREEN + f'Link logged{END_GREEN} - ID: {vidID[0]} - AUTHOR: {author_name} - DATE: {creation_date} - REACTIONS: {reactionCount}')
                     break
                         
             if isGoodLink == False:
@@ -143,8 +173,8 @@ async def on_ready():
                 
     end_time = time.time()
     log_time = end_time - start_time
-    print(BEG_BLUE +f'Finished logging {link_count} links in {log_time:.2f}s' + END_BLUE)
-    print("Listening for new links\n")
+    print("\n" + BEG_BLUE +f'Finished logging {link_count} links in {log_time:.2f}s' + END_BLUE)
+    print(BEG_FLASH + f'Listening for new links\n' + END_FLASH)
 ################################################################################################################################################
 def checkLink(info):
     global link_count
