@@ -124,35 +124,25 @@ def calculateTimeToWinner():
     print(f'Waiting {winner_time}s until next winner announced')
     #print("Bot startup time: " + str(hour) + " " + str(minute) + " " + str(day))
     
-    
-@bot.event
-async def on_ready():
-    calculateTimeToWinner()
-    #Get the channel from which to monitor repeat posts
-    start_time = time.time()
-    channel = bot.get_channel(getID)
-    global date_format
+async def logMessages(channel):
+    date_format = "%a, %b %d %Y"
     global link_count
     
-    print("User name: " + bot.user.name)
-    print("User id: " + str(bot.user.id))
-    print('We have logged in as {0.user}\n'.format(bot))
-    print(BEG_BLUE + "Starting link history log..." + END_BLUE + "\n")
-    
     async for message in channel.history(limit=None):
+        isGoodLink = False
         newMessage = message.content
         author_name = message.author
         author_id = message.author.id
         creation_date = message.created_at.strftime(date_format)
         reactions = message.reactions
         reactionCount = 0
+        
         if len(reactions) != 0:
             for reaction in reactions:
                 #print(reactions)
                 #print(type(reactions[0]))
                 #print(reactions[0].count)
                 reactionCount += reaction.count
-        isGoodLink = False
         
         if (newMessage is not None and newMessage.startswith("https")):
             for pattern in rePatterns:
@@ -170,6 +160,21 @@ async def on_ready():
                         
             if isGoodLink == False:
                 print(BEG_RED + f'Unsupported link type {newMessage}' + END_RED)
+                
+    
+@bot.event
+async def on_ready():
+    start_time = time.time()
+    #Get the channel from which to monitor repeat posts
+    channel = bot.get_channel(getID)
+    
+    print(f'User name: {bot.user.name} - ID: {str(bot.user.id)}')
+    print('We have logged in as {0.user}\n'.format(bot))
+    print(BEG_BLUE + "Starting link history log..." + END_BLUE + "\n")
+    
+    
+    await logMessages(channel)
+    calculateTimeToWinner()
                 
     end_time = time.time()
     log_time = end_time - start_time
@@ -305,6 +310,7 @@ async def qleave(ctx):
         await ctx.reply("I'm not in any channels genious")
 ################################################################################################################################################
 bot.run(TOKEN)
+
     
 
 
