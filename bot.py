@@ -7,6 +7,8 @@ from discord.ext import commands
 import os
 from dotenv import load_dotenv
 import datetime
+import requests
+from bs4 import BeautifulSoup
 
 #Channel IDs of the two channels in our discord that I use to implement this bot
 f = open("channels.txt", "r")
@@ -34,6 +36,7 @@ END_FLASH = '\33[0m'
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
+KEY = os.getenv("YOUTUBE_TOKEN")
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -107,6 +110,15 @@ f.seek(0)
 f.close()'''
 
 ################################################################################################################################################
+def getTitleFromURL(url):
+    r = requests.get(url)
+    soup = BeautifulSoup(r.text, features="lxml")
+    link = soup.find_all(name="title")[0]
+    title = str(link)
+    title = link.text
+    #print(title)
+    return title
+    
 def calculateTimeToWinner():
     myTime = datetime.datetime.today()
     day = myTime.weekday()
@@ -131,20 +143,14 @@ async def logMessages(channel):
     async for message in channel.history(limit=None):
         isGoodLink = False
         newMessage = message.content
-        author_name = message.author
-        author_id = message.author.id
-        creation_date = message.created_at.strftime(date_format)
-        reactions = message.reactions
-        reactionCount = 0
-        
-        if len(reactions) != 0:
-            for reaction in reactions:
-                #print(reactions)
-                #print(type(reactions[0]))
-                #print(reactions[0].count)
-                reactionCount += reaction.count
         
         if (newMessage is not None and newMessage.startswith("https")):
+            author_name = message.author
+            author_id = message.author.id
+            creation_date = message.created_at.strftime(date_format)
+            reactions = message.reactions
+            reactionCount = 0
+            
             for pattern in rePatterns:
                 vidID  = re.findall(pattern, newMessage)
                 #print(pattern)
@@ -157,10 +163,9 @@ async def logMessages(channel):
                     #Uncomment this line to see print out of how messages were handled
                     #print(BEG_GREEN + f'Link logged{END_GREEN} - ID: {vidID[0]} - AUTHOR: {author_name} - DATE: {creation_date} - REACTIONS: {reactionCount}')
                     break
-                        
+        
             if isGoodLink == False:
                 print(BEG_RED + f'Unsupported link type {newMessage}' + END_RED)
-                
     
 @bot.event
 async def on_ready():
@@ -233,8 +238,9 @@ async def on_message(ctx):
 ################################################################################################################################################
 
 @bot.command()
-async def test(ctx, arg):
-    await ctx.send("Test command - CORRECT WAY " + arg)
+#(ctx, arg)?
+async def test(ctx):
+    await ctx.send("**Test**\n`Hello`\n`World`")
 ################################################################################################################################################
 #Play a random clip each time !speak is called
 def getRandomInt():
@@ -309,6 +315,59 @@ async def qleave(ctx):
     except:
         await ctx.reply("I'm not in any channels genious")
 ################################################################################################################################################
+@bot.command()
+async def winner(ctx):
+    print(BEG_YELLOW + "Determining winner..." + END_YELLOW)
+    start_time = time.time()
+    channel = bot.get_channel(getID)
+    winners = []
+    mostReactions = 0
+    
+    async for message in channel.history(limit=None):
+        isGoodLink = False
+        newMessage = message.content
+        
+        if newMessage.startswith("Winner:"):
+            break
+            
+        elif (newMessage is not None and newMessage.startswith("https")):
+            author_name = message.author
+            author_id = message.author.id
+            creation_date = message.created_at.strftime(date_format)
+            reactions = message.reactions
+            reactionCount = 0
+            
+            if len(reactions) != 0:
+                for reaction in reactions:
+                    #print(reactions)
+                    #print(type(reactions[0]))
+                    #print(reactions[0].count)
+                    reactionCount += reaction.count
+                    
+                if reactionCount >= mostReactions:
+                    mostReactions = reactionCount
+                    title = getTitleFromURL(newMessage)
+                    title = title.split(" - YouTube")
+                    title = title[0]
+                    winners.append([newMessage, title, reactionCount])
+                    
+    #print(winners)
+    winnerMessage = ""
+    numWinners = len(winners)
+    winCount = 1
+    
+    for winner in winners: 
+        winnerMessage += "`" + winner[1] + "`"
+        winCount += 1
+        if winCount <= numWinners:
+            winnerMessage += "\n"
+            
+    await ctx.reply(f'**Winner:**\n{winnerMessage}')
+    
+    end_time = time.time()
+    log_time = end_time - start_time
+    print("\n" + BEG_BLUE +f'Winner of best video of the week computed in {log_time:.2f}s' + END_BLUE)
+################################################################################################################################################                
 bot.run(TOKEN)
 
     
