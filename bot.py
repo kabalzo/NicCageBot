@@ -1,4 +1,6 @@
-#This is my Nic Cage bot, enjoy
+################################################################################################################################################
+'''This is my Nic Cage bot, enjoy'''
+################################################################################################################################################
 import random
 import time
 import re
@@ -22,6 +24,12 @@ NicCageQuotes = f.readlines()
 f.seek(0)
 f.close()
 
+################################################################################################################################################
+'''Constants'''
+################################################################################################################################################
+DATE_FORMAT = "%a, %b %d %Y"
+EMPTY_WINNER = "https://tenor.com/view/100-gif-27642217"
+
 #Colors for shell print statements
 BEG_GREEN = '\33[32m'
 END_GREEN = '\33[0m'
@@ -34,6 +42,25 @@ END_BLUE = '\33[0m'
 BEG_FLASH = '\33[5m'
 END_FLASH = '\33[0m'
 
+#Regex patterns
+DEFAULT_PAT_1 = "https://www.youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)"
+DEFAULT_PAT_2 = "https://youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)[\&].*"
+MOBILE_PAT_1 = "https://youtu.be/([a-zA-Z0-9\_\-]+)\?.+"
+MOBILE_PAT_2 = "https://youtu.be/([a-zA-Z0-9\_\-]+)"
+SHORTS_PAT_1 = "https://www.youtube.com/shorts/([a-zA-Z0-9\_\-]+)"
+SHORTS_PAT_2 = "https://youtube.com/shorts/([a-zA-Z0-9\_\-]+)\?.*"
+
+################################################################################################################################################
+'''Setup'''
+################################################################################################################################################ 
+#TODO: change this
+gifs = [
+        "https://tenor.com/view/nicholas-cage-you-pointing-smoke-gif-14538102",
+        "https://tenor.com/view/nicolas-cage-the-rock-smile-windy-handsome-gif-15812740",
+        "https://tenor.com/view/woo-nick-cage-nicolas-cage-the-unbearable-weight-of-massive-talent-lets-go-gif-25135470",
+        "https://tenor.com/view/national-treasure-benjamin-gates-nicolas-cage-declaration-of-independence-steal-gif-4752081"
+        ]
+
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 KEY = os.getenv("YOUTUBE_TOKEN")
@@ -45,22 +72,7 @@ intents.message_content = True
 lastInt = -1
 vids = {}
 link_count = 1
-defaultPattern1 = "https://www.youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)"
-defaultPattern2 = "https://youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)[\&].*"
-mobilePattern1 = "https://youtu.be/([a-zA-Z0-9\_\-]+)\?.+"
-mobilePattern2 = "https://youtu.be/([a-zA-Z0-9\_\-]+)"
-shortsPattern1 = "https://www.youtube.com/shorts/([a-zA-Z0-9\_\-]+)"
-shortsPattern2 = "https://youtube.com/shorts/([a-zA-Z0-9\_\-]+)\?.*"
-rePatterns = [defaultPattern1, defaultPattern2, mobilePattern1, mobilePattern2, shortsPattern1, shortsPattern2]
-date_format = "%a, %b %d %Y"
-
-#TODO: change this
-gifs = [
-        "https://tenor.com/view/nicholas-cage-you-pointing-smoke-gif-14538102",
-        "https://tenor.com/view/nicolas-cage-the-rock-smile-windy-handsome-gif-15812740",
-        "https://tenor.com/view/woo-nick-cage-nicolas-cage-the-unbearable-weight-of-massive-talent-lets-go-gif-25135470",
-        "https://tenor.com/view/national-treasure-benjamin-gates-nicolas-cage-declaration-of-independence-steal-gif-4752081"
-        ]
+rePatterns = [DEFAULT_PAT_1, DEFAULT_PAT_2, MOBILE_PAT_1, MOBILE_PAT_2, SHORTS_PAT_1, SHORTS_PAT_2]
 
 #Channel that we're monitoring for repeat posts
 getID = 0
@@ -75,7 +87,9 @@ getIDtest = int(channelIDs[2])
 sendIDprod = int(channelIDs[1])
 sendIDtest = int(channelIDs[3])
 
-#Menu to launch program from shell
+################################################################################################################################################
+'''Menu to launch program from shell'''
+################################################################################################################################################
 while True:
     user_input = input("Run bot in PROD [1] or Run bot in TEST [2] Exit the program [0]: ")
     try:
@@ -101,6 +115,7 @@ while True:
     else:
         print(BEG_RED + 'Invalid selection. Try again.' + END_RED)
         
+################################################################################################################################################
 #For use with start/stop.sh files instead of starting via shell
 #Will not work with menu block
 '''pid = os.getpid()
@@ -137,7 +152,6 @@ def calculateTimeToWinner():
     #print("Bot startup time: " + str(hour) + " " + str(minute) + " " + str(day))
     
 async def logMessages(channel):
-    date_format = "%a, %b %d %Y"
     global link_count
     
     async for message in channel.history(limit=None):
@@ -147,7 +161,7 @@ async def logMessages(channel):
         if (newMessage is not None and newMessage.startswith("https")):
             author_name = message.author
             author_id = message.author.id
-            creation_date = message.created_at.strftime(date_format)
+            creation_date = message.created_at.strftime(DATE_FORMAT)
             reactions = message.reactions
             reactionCount = 0
             
@@ -185,10 +199,10 @@ async def on_ready():
     log_time = end_time - start_time
     print("\n" + BEG_BLUE +f'Finished logging {link_count} links in {log_time:.2f}s' + END_BLUE)
     print(BEG_FLASH + f'Listening for new links\n' + END_FLASH)
+    
 ################################################################################################################################################
 def checkLink(info):
     global link_count
-    global sendTo
     vidID = info[0]
     author_name = info[1]
     author_id = info[2]
@@ -210,14 +224,16 @@ def checkLink(info):
         
 @bot.event
 async def on_message(ctx):
-    global date_format
+    sendTo = bot.get_channel(sendID)
     newLink = ctx.content
     author_id = ctx.author.id
     author_name = ctx.author
-    creation_date = ctx.created_at.strftime(date_format)
+    creation_date = ctx.created_at.strftime(DATE_FORMAT)
+    
     #alertMessage = f'<@{author_id}> {newLink} has been posted previously'
     #Message is from correct channel we want to monitor
-    if ctx.channel.id == getID:
+    
+    if ctx.channel.id == getID and newLink.startswith("https://"):
         vidID = ""
         for pattern in rePatterns:
             checkPattern = re.findall(pattern, newLink)
@@ -241,6 +257,7 @@ async def on_message(ctx):
 #(ctx, arg)?
 async def test(ctx):
     await ctx.send("**Test**\n`Hello`\n`World`")
+    
 ################################################################################################################################################
 #Play a random clip each time !speak is called
 def getRandomInt():
@@ -267,15 +284,18 @@ async def speak(ctx):
             except:
                 print(BEG_RED + "No active voice channel - Clip not played" + END_RED)
             break
+            
 ################################################################################################################################################
 @bot.command()
 async def helpme(ctx):
        await ctx.reply("Commands: !join !qjoin !leave !qleave !speak !helpme !gif")
+       
 ################################################################################################################################################
 @bot.command()
 async def gif(ctx):
     randomGif = random.randint(0,3)
     await ctx.reply(gifs[randomGif])
+    
 ################################################################################################################################################
 @bot.command()
 async def join(ctx):
@@ -286,6 +306,7 @@ async def join(ctx):
     except:
         print(BEG_RED + "No members active in voice channel - Channel not joined" + END_RED)
         await ctx.reply("I can't join a voice channel without any active members")
+        
 ################################################################################################################################################
 @bot.command()
 async def qjoin(ctx):
@@ -295,6 +316,7 @@ async def qjoin(ctx):
     except:
         print(BEG_RED + "No members active in voice channel - Channel not joined" + END_RED)
         await ctx.reply("I can't join a voice channel without any active members")
+        
 ################################################################################################################################################
 @bot.command()
 async def leave(ctx):
@@ -305,6 +327,7 @@ async def leave(ctx):
         voice = await ctx.voice_client.disconnect()
     except:
         await ctx.reply("I'm not in any channels genious")
+        
 ################################################################################################################################################
 @bot.command()
 async def qleave(ctx):
@@ -314,10 +337,12 @@ async def qleave(ctx):
         voice = await ctx.voice_client.disconnect()
     except:
         await ctx.reply("I'm not in any channels genious")
+        
 ################################################################################################################################################
 @bot.command()
 async def winner(ctx):
     print(BEG_YELLOW + "Determining winner..." + END_YELLOW)
+    sendTo = bot.get_channel(sendID)
     start_time = time.time()
     channel = bot.get_channel(getID)
     winners = []
@@ -327,13 +352,13 @@ async def winner(ctx):
         isGoodLink = False
         newMessage = message.content
         
-        if newMessage.startswith("Winner:"):
+        if newMessage.startswith("Winner:") or newMessage.startswith("**Winner:"):
             break
             
         elif (newMessage is not None and newMessage.startswith("https")):
             author_name = message.author
             author_id = message.author.id
-            creation_date = message.created_at.strftime(date_format)
+            creation_date = message.created_at.strftime(DATE_FORMAT)
             reactions = message.reactions
             reactionCount = 0
             
@@ -347,8 +372,7 @@ async def winner(ctx):
                 if reactionCount >= mostReactions:
                     mostReactions = reactionCount
                     title = getTitleFromURL(newMessage)
-                    title = title.split(" - YouTube")
-                    title = title[0]
+                    title = title.split(" - YouTube")[0]
                     winners.append([newMessage, title, reactionCount])
                     
     #print(winners)
@@ -356,17 +380,27 @@ async def winner(ctx):
     numWinners = len(winners)
     winCount = 1
     
-    for winner in winners: 
-        winnerMessage += "`" + winner[1] + "`"
-        winCount += 1
-        if winCount <= numWinners:
-            winnerMessage += "\n"
+    if mostReactions != 0:
+        winnerMessage = ""
+        for winner in winners: 
+            winnerMessage += "`" + winner[1] + "`"
+            winCount += 1
+            if winCount <= numWinners:
+                winnerMessage += "\n"
+                
+        print(f'Winning vidoe(s): {winnerMessage}')
+        if  not ctx.channel.id == getID:
+            await ctx.reply(f'**Winner:**\n{winnerMessage}')
+        await channel.send(f'**Winner:**\n{winnerMessage}')
             
-    await ctx.reply(f'**Winner:**\n{winnerMessage}')
+    else:
+        print(BEG_RED + "No reactions found - Unable to calculate winner" + END_RED)
+        await ctx.reply(f'**Big, sad, empy bag of nothing**\n{EMPTY_WINNER}')
     
     end_time = time.time()
     log_time = end_time - start_time
     print("\n" + BEG_BLUE +f'Winner of best video of the week computed in {log_time:.2f}s' + END_BLUE)
+    
 ################################################################################################################################################                
 bot.run(TOKEN)
 
