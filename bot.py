@@ -125,6 +125,12 @@ f.seek(0)
 f.close()'''
 
 ################################################################################################################################################
+#Play a random clip each time !speak is called
+def getRandomInt():
+     i = random.randint(0, len(NicCageQuotes)-1)
+     return i
+     
+################################################################################################################################################
 def getTitleFromURL(url):
     r = requests.get(url)
     soup = BeautifulSoup(r.text, features="lxml")
@@ -180,7 +186,8 @@ async def logMessages(channel):
         
             if isGoodLink == False:
                 print(BEG_RED + f'Unsupported link type {newMessage}' + END_RED)
-    
+                
+################################################################################################################################################
 @bot.event
 async def on_ready():
     start_time = time.time()
@@ -252,17 +259,11 @@ async def on_message(ctx):
 ################################################################################################################################################
 '''All the commands to run from within discord chat below'''
 ################################################################################################################################################
-
 @bot.command()
 #(ctx, arg)?
 async def test(ctx):
     await ctx.send("**Test**\n`Hello`\n`World`")
     
-################################################################################################################################################
-#Play a random clip each time !speak is called
-def getRandomInt():
-     i = random.randint(0, len(NicCageQuotes)-1)
-     return i
 
 @bot.command()
 async def speak(ctx):
@@ -347,6 +348,7 @@ async def winner(ctx):
     channel = bot.get_channel(getID)
     winners = []
     mostReactions = 0
+    isWinner = False
     
     async for message in channel.history(limit=None):
         isGoodLink = False
@@ -373,25 +375,28 @@ async def winner(ctx):
                     mostReactions = reactionCount
                     title = getTitleFromURL(newMessage)
                     title = title.split(" - YouTube")[0]
-                    winners.append([newMessage, title, reactionCount])
+                    winners.append([newMessage, title, reactionCount, author_id])
                     
     #print(winners)
-    winnerMessage = ""
+    winningAuthors = "Congrats on winning best vid of the week: "
     numWinners = len(winners)
     winCount = 1
     
     if mostReactions != 0:
-        winnerMessage = ""
+        isWinner = True
+        winningTitles = ""
         for winner in winners: 
-            winnerMessage += "`" + winner[1] + "`"
+            winningTitles += "`" + winner[1] + "`"
+            winningAuthors += f'<@{winner[3]}>'
             winCount += 1
             if winCount <= numWinners:
-                winnerMessage += "\n"
+                winningTitles += "\n"
+                winningAuthors += " & "
                 
-        print(f'Winning vidoe(s): {winnerMessage}')
+        print(f'Winning vidoe(s): {winningTitles}')
         if  not ctx.channel.id == getID:
-            await ctx.reply(f'**Winner:**\n{winnerMessage}')
-        await channel.send(f'**Winner:**\n{winnerMessage}')
+            await ctx.reply(f'**Winner:**\n{winningTitles}\n{winningAuthors}')
+        await channel.send(f'**Winner:**\n{winningTitles}\n{winningAuthors}')
             
     else:
         print(BEG_RED + "No reactions found - Unable to calculate winner" + END_RED)
@@ -399,8 +404,9 @@ async def winner(ctx):
     
     end_time = time.time()
     log_time = end_time - start_time
-    print("\n" + BEG_BLUE +f'Winner of best video of the week computed in {log_time:.2f}s' + END_BLUE)
     
+    if isWinner == True:
+        print("\n" + BEG_BLUE +f'Winner of best video of the week computed in {log_time:.2f}s' + END_BLUE)
 ################################################################################################################################################                
 bot.run(TOKEN)
 
