@@ -11,6 +11,9 @@ from dotenv import load_dotenv
 import datetime
 import requests
 from bs4 import BeautifulSoup
+import threading
+import asyncio
+from async_timeout import timeout
 
 #Channel IDs of the two channels in our discord that I use to implement this bot
 f = open("channels.txt", "r")
@@ -140,7 +143,8 @@ def getTitleFromURL(url):
     #print(title)
     return title
     
-def calculateTimeToWinner():
+async def calculateTimeToWinner():
+    sendTo = bot.get_channel(sendID)
     myTime = datetime.datetime.today()
     day = myTime.weekday()
     daysReference = [[0, 6, "Monday"], [1, 4, "Tuesday"], [2, 2, "Wednesday"], [3, 0, "Thursday"], [4, -2, "Friday"], [5, -4, "Saturday"], [6, 1, "Sunday"]]
@@ -152,10 +156,22 @@ def calculateTimeToWinner():
             break
     
     #Will alert at 1am Sundays
-    winner_time = (day*86400) - (myTime.hour*3600) - (myTime.minute*60) + 3600
+    warning_time = (day*86400) - (myTime.hour*3600) - (myTime.minute*60) + 3600 - 28800
+    totalTime = warning_time + 28800
+    print(f'Waiting {totalTime}s until next winner announced')
     
-    print(f'Waiting {winner_time}s until next winner announced')
-    #print("Bot startup time: " + str(hour) + " " + str(minute) + " " + str(day))
+    await asyncio.sleep(warning_time)
+    #await asyncio.sleep(300)
+    print(BEG_YELLOW + "Sending reminder to vote for best vid of the week" + END_YELLOW)
+    await sendTo.send("@everyone\nRemember to vote for **Best Video of the Week**\nWinner(s) will be announced in 8 hours")
+    
+    #First wait the warning time and send warning, then wait another 8 hours and pick winner
+    await asyncio.sleep(28800)
+    #await asyncio.sleep(300)
+    print(BEG_YELLOW + "Accouncing best vid of the week" + END_YELLOW)
+    await sendTo.send("!winner")
+    #Recurse and start calculate/sleep process over
+    await calculateTimeToWinner()
     
 async def logMessages(channel):
     global link_count
@@ -198,14 +214,16 @@ async def on_ready():
     print('We have logged in as {0.user}\n'.format(bot))
     print(BEG_BLUE + "Starting link history log..." + END_BLUE + "\n")
     
-    
     await logMessages(channel)
-    calculateTimeToWinner()
                 
     end_time = time.time()
     log_time = end_time - start_time
     print("\n" + BEG_BLUE +f'Finished logging {link_count} links in {log_time:.2f}s' + END_BLUE)
     print(BEG_FLASH + f'Listening for new links\n' + END_FLASH)
+    
+    await asyncio.wait_for(calculateTimeToWinner(), timeout=604801)
+    
+    #print("on_ready DONE")
     
 ################################################################################################################################################
 def checkLink(info):
@@ -253,6 +271,10 @@ async def on_message(ctx):
         if repeat == True:
             og_info = vids[vidID]
             await sendTo.send(f'<@{author_id}> {newLink} was posted by <@{og_info[2]}> on {og_info[3]}')
+            
+    elif ctx.channel.id == sendID and ctx.author == bot.user and newLink == "!winner":
+        #time.sleep(60)
+        await winner(ctx)
     
     await bot.process_commands(ctx)
     
@@ -262,7 +284,7 @@ async def on_message(ctx):
 @bot.command()
 #(ctx, arg)?
 async def test(ctx):
-    await ctx.send("**Test**\n`Hello`\n`World`")
+    await ctx.send('```md#Hello```')
     
 
 @bot.command()
@@ -407,8 +429,15 @@ async def winner(ctx):
     
     if isWinner == True:
         print("\n" + BEG_BLUE +f'Winner of best video of the week computed in {log_time:.2f}s' + END_BLUE)
-################################################################################################################################################                
+        
+@bot.command()
+async def kill(ctx):
+    await ctx.reply("Goodbye cruel world")
+    print("Attempting to shut down program")
+    exit()
+################################################################################################################################################               
 bot.run(TOKEN)
+
 
     
 
