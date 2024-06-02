@@ -168,7 +168,7 @@ async def calculateTimeToWinner():
     #First wait the warning time and send warning, then wait another 8 hours and pick winner
     await asyncio.sleep(28800)
     #await asyncio.sleep(300)
-    print(BEG_YELLOW + "Accouncing best vid of the week" + END_YELLOW)
+    print(BEG_YELLOW + "Announcing best video of the week" + END_YELLOW)
     await sendTo.send("!winner")
     #Recurse and start calculate/sleep process over
     await calculateTimeToWinner()
@@ -388,16 +388,22 @@ async def winner(ctx):
             
             if len(reactions) != 0:
                 for reaction in reactions:
-                    #print(reactions)
-                    #print(type(reactions[0]))
-                    #print(reactions[0].count)
+                    print(reactions)
+                    print(type(reactions[0]))
+                    print(reactions[0].count)
                     reactionCount += reaction.count
                     
+                if reactionCount > mostReactions:
+                    print("Found winner with higher total count. Winners reset.")
+                    winners = []
+                    
                 if reactionCount >= mostReactions:
+                    print(f'Reaction count {reactionCount} Most reactions {mostReactions}')
                     mostReactions = reactionCount
                     title = getTitleFromURL(newMessage)
                     title = title.split(" - YouTube")[0]
                     winners.append([newMessage, title, reactionCount, author_id])
+                    print(f'Video added to winner. There are {reactionCount} reactions for {title}')
                     
     #print(winners)
     winningAuthors = "Congrats on winning best vid of the week: "
