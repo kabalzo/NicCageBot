@@ -147,7 +147,15 @@ async def calculateTimeToWinner():
     sendTo = bot.get_channel(sendID)
     myTime = datetime.datetime.today()
     day = myTime.weekday()
-    daysReference = [[0, 6, "Monday"], [1, 4, "Tuesday"], [2, 2, "Wednesday"], [3, 0, "Thursday"], [4, -2, "Friday"], [5, -4, "Saturday"], [6, 1, "Sunday"]]
+    
+    #Following the days of the week in order should cascade from 7 down to 1
+    #Alerts on Sunday
+    #daysReference = [[0, 6, "Monday"], [1, 4, "Tuesday"], [2, 2, "Wednesday"], [3, 0, "Thursday"], [4, -2, "Friday"], [5, -4, "Saturday"], [6, 1, "Sunday"]]
+    #Alerts on Monday
+    daysReference = [[0, 7, "Monday"], [1, 5, "Tuesday"], [2, 3, "Wednesday"], [3, 1, "Thursday"], [4, -1, "Friday"], [5, -3, "Saturday"], [6, -5, "Sunday"]]
+    #Alerts on Tuesday
+    #daysReference = [[0, 1, "Monday"], [1, 6, "Tuesday"], [2, 4, "Wednesday"], [3, 2, "Thursday"], [4, 0, "Friday"], [5, -2, "Saturday"], [6, -4, "Sunday"]]
+    #Etc.
     
     for ref in daysReference:
         if day == ref[0]:
@@ -155,7 +163,7 @@ async def calculateTimeToWinner():
             #print(f'It\'s {ref[2]} - {day}')
             break
     
-    #Will alert at 1am Sundays
+    #Will alert at 1am on whatever day in daysReference where indeces 0 and 1 add up to 7
     warning_time = (day*86400) - (myTime.hour*3600) - (myTime.minute*60) + 3600 - 28800
     totalTime = warning_time + 28800
     print(f'Waiting {totalTime}s until next winner announced')
@@ -388,22 +396,22 @@ async def winner(ctx):
             
             if len(reactions) != 0:
                 for reaction in reactions:
-                    print(reactions)
-                    print(type(reactions[0]))
-                    print(reactions[0].count)
+                    #print(reactions)
+                    #print(type(reactions[0]))
+                    #print(reactions[0].count)
                     reactionCount += reaction.count
                     
                 if reactionCount > mostReactions:
-                    print("Found winner with higher total count. Winners reset.")
+                    #print("Found winner with higher total count. Winners reset.")
                     winners = []
                     
                 if reactionCount >= mostReactions:
-                    print(f'Reaction count {reactionCount} Most reactions {mostReactions}')
+                    #print(f'Reaction count {reactionCount} Most reactions {mostReactions}')
                     mostReactions = reactionCount
                     title = getTitleFromURL(newMessage)
                     title = title.split(" - YouTube")[0]
                     winners.append([newMessage, title, reactionCount, author_id])
-                    print(f'Video added to winner. There are {reactionCount} reactions for {title}')
+                    #print(f'Video added to winner. There are {reactionCount} reactions for {title}')
                     
     #print(winners)
     winningAuthors = "Congrats on winning best vid of the week: "
@@ -421,7 +429,7 @@ async def winner(ctx):
                 winningTitles += "\n"
                 winningAuthors += " & "
                 
-        print(f'Winning vidoe(s): {winningTitles}')
+        print(f'Winning video(s): {winningTitles}')
         if  not ctx.channel.id == getID:
             await ctx.reply(f'**Winner:**\n{winningTitles}\n{winningAuthors}')
         await channel.send(f'**Winner:**\n{winningTitles}\n{winningAuthors}')
