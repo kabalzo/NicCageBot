@@ -134,6 +134,7 @@ def getRandomInt():
      return i
      
 ################################################################################################################################################
+#TODO: This is the slowest part of the whole bot, the GET request takes way too long
 def getTitleFromURL(url):
     r = requests.get(url)
     soup = BeautifulSoup(r.text, features="lxml")
@@ -149,35 +150,52 @@ async def calculateTimeToWinner():
     day = myTime.weekday()
     
     #Following the days of the week in order should cascade from 7 down to 1
+    #TODO: Turn this into a for loop
     #Alerts on Sunday
     #daysReference = [[0, 6, "Monday"], [1, 4, "Tuesday"], [2, 2, "Wednesday"], [3, 0, "Thursday"], [4, -2, "Friday"], [5, -4, "Saturday"], [6, 1, "Sunday"]]
     #Alerts on Monday
     daysReference = [[0, 7, "Monday"], [1, 5, "Tuesday"], [2, 3, "Wednesday"], [3, 1, "Thursday"], [4, -1, "Friday"], [5, -3, "Saturday"], [6, -5, "Sunday"]]
     #Alerts on Tuesday
     #daysReference = [[0, 1, "Monday"], [1, 6, "Tuesday"], [2, 4, "Wednesday"], [3, 2, "Thursday"], [4, 0, "Friday"], [5, -2, "Saturday"], [6, -4, "Sunday"]]
-    #Etc.
-    
+    #Alerts on Wednesday
+    #daysReference = [[0, 2, "Monday"], [1, 0, "Tuesday"], [2, 5, "Wednesday"], [3, 3, "Thursday"], [4, 1, "Friday"], [5, -1, "Saturday"], [6, -3, "Sunday"]]
+    #Alerts on Thursday
+    #daysReference = [[0, 3, "Monday"], [1, 1, "Tuesday"], [2, -1, "Wednesday"], [3, 4, "Thursday"], [4, 2, "Friday"], [5, 0, "Saturday"], [6, -2, "Sunday"]]
+    #Alerts on Friday
+    #daysReference = [[0, 4, "Monday"], [1, 2, "Tuesday"], [2, 0, "Wednesday"], [3, -2, "Thursday"], [4, 3, "Friday"], [5, 1, "Saturday"], [6, -1, "Sunday"]]
+    #Alerts on Saturday
+    #daysReference = [[0, 5, "Monday"], [1, 3, "Tuesday"], [2, 1, "Wednesday"], [3, -1, "Thursday"], [4, -3, "Friday"], [5, 2, "Saturday"], [6, 0, "Sunday"]]
+            
     for ref in daysReference:
         if day == ref[0]:
             day += ref[1]
-            #print(f'It\'s {ref[2]} - {day}')
+            print(f'Today is {ref[2]}')
             break
+            
+    for ref in daysReference:
+        if ref[0] + ref[1] == 7:
+            print(f'Winners announced on {ref[2]}')
     
     #Will alert at 1am on whatever day in daysReference where indeces 0 and 1 add up to 7
-    warning_time = (day*86400) - (myTime.hour*3600) - (myTime.minute*60) + 3600 - 28800
-    totalTime = warning_time + 28800
-    print(f'Waiting {totalTime}s until next winner announced')
+    warning_time = (day*86400) - (myTime.hour*3600) - (myTime.minute*60) + 3600 - 14400
+    totalTime = warning_time + 14400
+    print(f'Waiting {warning_time/3600.00:.2f} hours until winner warning')
+    print(f'Waiting {totalTime/3600.00:.2f} hours until next winner announced')
     
     await asyncio.sleep(warning_time)
-    #await asyncio.sleep(300)
+    #This is for testing
+    #await asyncio.sleep(10)
     print(BEG_YELLOW + "Sending reminder to vote for best vid of the week" + END_YELLOW)
-    await sendTo.send("@everyone\nRemember to vote for **Best Video of the Week**\nWinner(s) will be announced in 8 hours")
+    await sendTo.send("@everyone\nRemember to vote for **Best Video of the Week**\nWinner(s) will be announced in 4 hours")
     
     #First wait the warning time and send warning, then wait another 8 hours and pick winner
-    await asyncio.sleep(28800)
-    #await asyncio.sleep(300)
+    await asyncio.sleep(14400)
+    #This is for testing
+    #await asyncio.sleep(10)
     print(BEG_YELLOW + "Announcing best video of the week" + END_YELLOW)
-    await sendTo.send("!winner")
+    
+    ctx = bot.get_context
+    await winner(ctx)
     #Recurse and start calculate/sleep process over
     await calculateTimeToWinner()
     
@@ -430,9 +448,9 @@ async def winner(ctx):
                 winningAuthors += " & "
                 
         print(f'Winning video(s): {winningTitles}')
-        if  not ctx.channel.id == getID:
-            await ctx.reply(f'**Winner:**\n{winningTitles}\n{winningAuthors}')
-        await channel.send(f'**Winner:**\n{winningTitles}\n{winningAuthors}')
+        #if  not ctx.channel.id == getID:
+            #await ctx.reply(f'**Winner:**\n\n{winningTitles}\n\n{winningAuthors}')
+        await channel.send(f'**Winner:**\n\n{winningTitles}\n\n{winningAuthors}')
             
     else:
         print(BEG_RED + "No reactions found - Unable to calculate winner" + END_RED)
@@ -448,7 +466,7 @@ async def winner(ctx):
 async def kill(ctx):
     await ctx.reply("Goodbye cruel world")
     print("Attempting to shut down program")
-    exit()
+    quit()
 ################################################################################################################################################               
 bot.run(TOKEN)
 
