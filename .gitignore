@@ -2,7 +2,11 @@
 *.exe
 *.txt
 testing.py
+playlist.py
 *.cfg
 lib64
 *.out
 pid
+*.json
+*.pickle
+*.goutputstream*

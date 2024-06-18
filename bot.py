@@ -14,6 +14,12 @@ from bs4 import BeautifulSoup
 import threading
 import asyncio
 from async_timeout import timeout
+from googleapiclient.discovery import build
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+import os.path
+import pickle
+
 
 #Channel IDs of the two channels in our discord that I use to implement this bot
 f = open("channels.txt", "r")
@@ -30,6 +36,12 @@ f.close()
 ################################################################################################################################################
 '''Constants'''
 ################################################################################################################################################
+# Define your API key and the necessary parameters
+API_SERVICE_NAME = 'youtube'
+API_VERSION = 'v3'
+# If modifying these scopes, delete the file token.pickle.
+SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl']
+
 DATE_FORMAT = "%a, %b %d %Y"
 EMPTY_WINNER = "https://tenor.com/view/100-gif-27642217"
 
@@ -66,7 +78,7 @@ gifs = [
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
-KEY = os.getenv("YOUTUBE_TOKEN")
+#KEY = os.getenv("YOUTUBE_TOKEN")
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -79,7 +91,14 @@ rePatterns = [DEFAULT_PAT_1, DEFAULT_PAT_2, MOBILE_PAT_1, MOBILE_PAT_2, SHORTS_P
 
 #Channel that we're monitoring for repeat posts
 getID = 0
+#Channel we send messages to
 sendID = 0
+
+#Playlist to update, this works when it's hard coded here, but fails when the playlist ID is read from a file (for some reason)
+#Best Video of the Day - Talith
+PLAYLIST_ID = 'PLSLlIlXQSsqmKbKSstCSoS4RLoSo2awoX'
+#Movie Boys - 4-Saken(me)
+#PLAYLIST_ID = 'PLl58uFKfuzLU-HfruEVohMJOC4Ag1DThy'
 
 #These are for the menu
 #For me only, [0:1] is prod [2:3] is test
@@ -89,6 +108,10 @@ getIDtest = int(channelIDs[2])
 #Channel that we send the repeat noticication message to, check ref.txt
 sendIDprod = int(channelIDs[1])
 sendIDtest = int(channelIDs[3])
+
+#Playlist to add the best video to
+PLAYLIST_ID_PROD = channelIDs[4]
+PLAYLIST_ID_TEST = channelIDs[5]
 
 ################################################################################################################################################
 '''Menu to launch program from shell'''
@@ -104,11 +127,13 @@ while True:
     if user_input == 1:
         getID = getIDprod
         sendID = sendIDprod
+        #PLAYLIST_ID = PLAYLIST_ID_PROD
         print("Starting bot in main channels")
         break
     elif user_input == 2:
         getID = getIDtest
         sendID = sendIDtest
+        #PLAYLIST_ID = PLAYLIST_ID_TEST
         print("Starting bot in test channels")
         break
     elif user_input == 0:
@@ -128,6 +153,49 @@ f.seek(0)
 f.close()'''
 
 ################################################################################################################################################
+def add_video_to_playlist(credentials, video_id, playlist_id):
+    youtube = build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
+
+    # Add video to playlist
+    request = youtube.playlistItems().insert(
+        part="snippet",
+        body={
+            "snippet": {
+                "playlistId": playlist_id,
+                "resourceId": {
+                    "kind": "youtube#video",
+                    "videoId": video_id
+                }
+            }
+        }
+    )
+
+    response = request.execute()
+    print(BEG_GREEN + f'Video {video_id} added to playlist {playlist_id}' + END_GREEN)
+
+def get_authenticated_service():
+    creds = None
+    # The file token.pickle stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists('token.pickle'):
+        with open('token.pickle', 'rb') as token:
+            try:
+                creds = pickle.load(token)
+            except EOFError:
+                pass
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        flow = InstalledAppFlow.from_client_secrets_file(
+            'credentials.json', SCOPES)
+        creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open('token.pickle', 'wb') as token:
+            pickle.dump(creds, token)
+
+    return creds
+
+################################################################################################################################################
 #Play a random clip each time !speak is called
 def getRandomInt():
      i = random.randint(0, len(NicCageQuotes)-1)
@@ -144,7 +212,7 @@ def getTitleFromURL(url):
     #print(title)
     return title
     
-async def calculateTimeToWinner():
+async def calculateTimeToWinner(credentials):
     sendTo = bot.get_channel(sendID)
     myTime = datetime.datetime.today()
     day = myTime.weekday()
@@ -194,10 +262,29 @@ async def calculateTimeToWinner():
     #await asyncio.sleep(10)
     print(BEG_YELLOW + "Announcing best video of the week" + END_YELLOW)
     
+    #Call to calculate the winners and send messages to discord channels
     ctx = bot.get_context
-    await winner(ctx)
+    winners = await winner(ctx)
+    
+    #This block for adding the winners to the playlist
+    winner_IDs = []
+    for win in winners:
+        vidID = ""
+        for pattern in rePatterns:
+            checkPattern = re.findall(pattern, win[0])
+            if (len(checkPattern) != 0):
+                vidID = checkPattern[0]
+                winner_IDs.append(vidID)
+                break
+                
+    for vid in winner_IDs:
+        try:
+            add_video_to_playlist(credentials, vid, PLAYLIST_ID)
+        except:
+            print(BEG_RED + f'Failed to add video {vid} to playlist {PLAYLIST_ID}' + END_RED) 
+                
     #Recurse and start calculate/sleep process over
-    await calculateTimeToWinner()
+    await calculateTimeToWinner(credentials)
     
 async def logMessages(channel):
     global link_count
@@ -247,7 +334,9 @@ async def on_ready():
     print("\n" + BEG_BLUE +f'Finished logging {link_count} links in {log_time:.2f}s' + END_BLUE)
     print(BEG_FLASH + f'Listening for new links\n' + END_FLASH)
     
-    await asyncio.wait_for(calculateTimeToWinner(), timeout=604801)
+    credentials = get_authenticated_service()
+    
+    await asyncio.wait_for(calculateTimeToWinner(credentials), timeout=604801)
     
     #print("on_ready DONE")
     
@@ -461,6 +550,8 @@ async def winner(ctx):
     
     if isWinner == True:
         print("\n" + BEG_BLUE +f'Winner of best video of the week computed in {log_time:.2f}s' + END_BLUE)
+        
+    return winners
         
 @bot.command()
 async def kill(ctx):
