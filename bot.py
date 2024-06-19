@@ -19,6 +19,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import os.path
 import pickle
+import auth
 
 
 #Channel IDs of the two channels in our discord that I use to implement this bot
@@ -153,49 +154,6 @@ f.seek(0)
 f.close()'''
 
 ################################################################################################################################################
-def add_video_to_playlist(credentials, video_id, playlist_id):
-    youtube = build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
-
-    # Add video to playlist
-    request = youtube.playlistItems().insert(
-        part="snippet",
-        body={
-            "snippet": {
-                "playlistId": playlist_id,
-                "resourceId": {
-                    "kind": "youtube#video",
-                    "videoId": video_id
-                }
-            }
-        }
-    )
-
-    response = request.execute()
-    print(BEG_GREEN + f'Video {video_id} added to playlist {playlist_id}' + END_GREEN)
-
-def get_authenticated_service():
-    creds = None
-    # The file token.pickle stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
-            try:
-                creds = pickle.load(token)
-            except EOFError:
-                pass
-    # If there are no (valid) credentials available, let the user log in.
-    if not creds or not creds.valid:
-        flow = InstalledAppFlow.from_client_secrets_file(
-            'credentials.json', SCOPES)
-        creds = flow.run_local_server(port=0)
-        # Save the credentials for the next run
-        with open('token.pickle', 'wb') as token:
-            pickle.dump(creds, token)
-
-    return creds
-
-################################################################################################################################################
 #Play a random clip each time !speak is called
 def getRandomInt():
      i = random.randint(0, len(NicCageQuotes)-1)
@@ -250,16 +208,16 @@ async def calculateTimeToWinner(credentials):
     print(f'Waiting {warning_time/3600.00:.2f} hours until winner warning')
     print(f'Waiting {totalTime/3600.00:.2f} hours until next winner announced')
     
-    await asyncio.sleep(warning_time)
+    #await asyncio.sleep(warning_time)
     #This is for testing
-    #await asyncio.sleep(10)
+    await asyncio.sleep(10)
     print(BEG_YELLOW + "Sending reminder to vote for best vid of the week" + END_YELLOW)
     await sendTo.send("@everyone\nRemember to vote for **Best Video of the Week**\nWinner(s) will be announced in 4 hours")
     
     #First wait the warning time and send warning, then wait another 8 hours and pick winner
-    await asyncio.sleep(14400)
+    #await asyncio.sleep(14400)
     #This is for testing
-    #await asyncio.sleep(10)
+    await asyncio.sleep(10)
     print(BEG_YELLOW + "Announcing best video of the week" + END_YELLOW)
     
     #Call to calculate the winners and send messages to discord channels
@@ -279,7 +237,7 @@ async def calculateTimeToWinner(credentials):
                 
     for vid in winner_IDs:
         try:
-            add_video_to_playlist(credentials, vid, PLAYLIST_ID)
+            auth.add_video_to_playlist(credentials, vid)
         except:
             print(BEG_RED + f'Failed to add video {vid} to playlist {PLAYLIST_ID}' + END_RED) 
                 
@@ -334,7 +292,7 @@ async def on_ready():
     print("\n" + BEG_BLUE +f'Finished logging {link_count} links in {log_time:.2f}s' + END_BLUE)
     print(BEG_FLASH + f'Listening for new links\n' + END_FLASH)
     
-    credentials = get_authenticated_service()
+    credentials = auth.get_authenticated_service()
     
     await asyncio.wait_for(calculateTimeToWinner(credentials), timeout=604801)
     
