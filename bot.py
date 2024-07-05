@@ -14,6 +14,12 @@ from bs4 import BeautifulSoup
 import threading
 import asyncio
 from async_timeout import timeout
+from googleapiclient.discovery import build
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+import os.path
+import pickle
+
 
 #Channel IDs of the two channels in our discord that I use to implement this bot
 f = open("channels.txt", "r")
@@ -30,6 +36,12 @@ f.close()
 ################################################################################################################################################
 '''Constants'''
 ################################################################################################################################################
+# Define your API key and the necessary parameters
+API_SERVICE_NAME = 'youtube'
+API_VERSION = 'v3'
+# If modifying these scopes, delete the file token.pickle.
+SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl']
+
 DATE_FORMAT = "%a, %b %d %Y"
 EMPTY_WINNER = "https://tenor.com/view/100-gif-27642217"
 
@@ -66,7 +78,7 @@ gifs = [
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
-KEY = os.getenv("YOUTUBE_TOKEN")
+#KEY = os.getenv("YOUTUBE_TOKEN")
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -79,7 +91,15 @@ rePatterns = [DEFAULT_PAT_1, DEFAULT_PAT_2, MOBILE_PAT_1, MOBILE_PAT_2, SHORTS_P
 
 #Channel that we're monitoring for repeat posts
 getID = 0
+#Channel we send messages to
 sendID = 0
+
+#Playlist to update, this works when it's hard coded here, but fails when the playlist ID is read from a file (for some reason)
+PLAYLIST_ID = ""
+#Best Video of the Day - Talith
+PLAYLIST_ID_PROD = 'PLSLlIlXQSsqmKbKSstCSoS4RLoSo2awoX'
+#Movie Boys - 4-Saken(me)
+PLAYLIST_ID_TEST = 'PLl58uFKfuzLU-HfruEVohMJOC4Ag1DThy'
 
 #These are for the menu
 #For me only, [0:1] is prod [2:3] is test
@@ -89,6 +109,10 @@ getIDtest = int(channelIDs[2])
 #Channel that we send the repeat noticication message to, check ref.txt
 sendIDprod = int(channelIDs[1])
 sendIDtest = int(channelIDs[3])
+
+#Playlist to add the best video to
+#PLAYLIST_ID_PROD = channelIDs[4]
+#PLAYLIST_ID_TEST = channelIDs[5]
 
 ################################################################################################################################################
 '''Menu to launch program from shell'''
@@ -104,11 +128,13 @@ while True:
     if user_input == 1:
         getID = getIDprod
         sendID = sendIDprod
+        PLAYLIST_ID = PLAYLIST_ID_PROD
         print("Starting bot in main channels")
         break
     elif user_input == 2:
         getID = getIDtest
         sendID = sendIDtest
+        PLAYLIST_ID = PLAYLIST_ID_TEST
         print("Starting bot in test channels")
         break
     elif user_input == 0:
@@ -128,6 +154,52 @@ f.seek(0)
 f.close()'''
 
 ################################################################################################################################################
+def add_video_to_playlist(credentials, video_id, playlist_id):
+	print("start add")
+	youtube = build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
+
+	# Add video to playlist
+	request = youtube.playlistItems().insert(
+		part="snippet",
+		body={
+			"snippet": {
+				"playlistId": playlist_id,
+				"resourceId": {
+					"kind": "youtube#video",
+					"videoId": video_id
+				}
+			}
+		}
+	)
+
+	response = request.execute()
+	print(BEG_GREEN + f'Video {video_id} added to playlist {playlist_id}' + END_GREEN)
+
+async def get_authenticated_service():
+    print(BEG_YELLOW + "Youtube authentication started" + END_YELLOW)
+    creds = None
+    # The file token.pickle stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists('token.pickle'):
+        with open('token.pickle', 'rb') as token:
+            try:
+                creds = pickle.load(token)
+            except EOFError:
+                pass
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        flow = InstalledAppFlow.from_client_secrets_file(
+            'credentials.json', SCOPES)
+        creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open('token.pickle', 'wb') as token:
+            pickle.dump(creds, token)
+
+    print(BEG_YELLOW + "Youtube authentication completed" + END_YELLOW)
+    return creds
+
+################################################################################################################################################
 #Play a random clip each time !speak is called
 def getRandomInt():
      i = random.randint(0, len(NicCageQuotes)-1)
@@ -144,60 +216,80 @@ def getTitleFromURL(url):
     #print(title)
     return title
     
-async def calculateTimeToWinner():
-    sendTo = bot.get_channel(sendID)
-    myTime = datetime.datetime.today()
-    day = myTime.weekday()
-    
-    #Following the days of the week in order should cascade from 7 down to 1
-    #TODO: Turn this into a for loop
-    #Alerts on Sunday
-    #daysReference = [[0, 6, "Monday"], [1, 4, "Tuesday"], [2, 2, "Wednesday"], [3, 0, "Thursday"], [4, -2, "Friday"], [5, -4, "Saturday"], [6, 1, "Sunday"]]
-    #Alerts on Monday
-    daysReference = [[0, 7, "Monday"], [1, 5, "Tuesday"], [2, 3, "Wednesday"], [3, 1, "Thursday"], [4, -1, "Friday"], [5, -3, "Saturday"], [6, -5, "Sunday"]]
-    #Alerts on Tuesday
-    #daysReference = [[0, 1, "Monday"], [1, 6, "Tuesday"], [2, 4, "Wednesday"], [3, 2, "Thursday"], [4, 0, "Friday"], [5, -2, "Saturday"], [6, -4, "Sunday"]]
-    #Alerts on Wednesday
-    #daysReference = [[0, 2, "Monday"], [1, 0, "Tuesday"], [2, 5, "Wednesday"], [3, 3, "Thursday"], [4, 1, "Friday"], [5, -1, "Saturday"], [6, -3, "Sunday"]]
-    #Alerts on Thursday
-    #daysReference = [[0, 3, "Monday"], [1, 1, "Tuesday"], [2, -1, "Wednesday"], [3, 4, "Thursday"], [4, 2, "Friday"], [5, 0, "Saturday"], [6, -2, "Sunday"]]
-    #Alerts on Friday
-    #daysReference = [[0, 4, "Monday"], [1, 2, "Tuesday"], [2, 0, "Wednesday"], [3, -2, "Thursday"], [4, 3, "Friday"], [5, 1, "Saturday"], [6, -1, "Sunday"]]
-    #Alerts on Saturday
-    #daysReference = [[0, 5, "Monday"], [1, 3, "Tuesday"], [2, 1, "Wednesday"], [3, -1, "Thursday"], [4, -3, "Friday"], [5, 2, "Saturday"], [6, 0, "Sunday"]]
-            
-    for ref in daysReference:
-        if day == ref[0]:
-            day += ref[1]
-            print(f'Today is {ref[2]}')
-            break
-            
-    for ref in daysReference:
-        if ref[0] + ref[1] == 7:
-            print(f'Winners announced on {ref[2]}')
-    
-    #Will alert at 1am on whatever day in daysReference where indeces 0 and 1 add up to 7
-    warning_time = (day*86400) - (myTime.hour*3600) - (myTime.minute*60) + 3600 - 14400
-    totalTime = warning_time + 14400
-    print(f'Waiting {warning_time/3600.00:.2f} hours until winner warning')
-    print(f'Waiting {totalTime/3600.00:.2f} hours until next winner announced')
-    
-    await asyncio.sleep(warning_time)
-    #This is for testing
-    #await asyncio.sleep(10)
-    print(BEG_YELLOW + "Sending reminder to vote for best vid of the week" + END_YELLOW)
-    await sendTo.send("@everyone\nRemember to vote for **Best Video of the Week**\nWinner(s) will be announced in 4 hours")
-    
-    #First wait the warning time and send warning, then wait another 8 hours and pick winner
-    await asyncio.sleep(14400)
-    #This is for testing
-    #await asyncio.sleep(10)
-    print(BEG_YELLOW + "Announcing best video of the week" + END_YELLOW)
-    
-    ctx = bot.get_context
-    await winner(ctx)
-    #Recurse and start calculate/sleep process over
-    await calculateTimeToWinner()
+async def calculateTimeToWinner(credentials):
+	sendTo = bot.get_channel(sendID)
+	myTime = datetime.datetime.today()
+	day = myTime.weekday()
+
+	#Following the days of the week in order should cascade from 7 down to 1
+	#TODO: Turn this into a for loop
+	#Alerts on Sunday
+	#daysReference = [[0, 6, "Monday"], [1, 4, "Tuesday"], [2, 2, "Wednesday"], [3, 0, "Thursday"], [4, -2, "Friday"], [5, -4, "Saturday"], [6, 1, "Sunday"]]
+	#Alerts on Monday
+	daysReference = [[0, 7, "Monday"], [1, 5, "Tuesday"], [2, 3, "Wednesday"], [3, 1, "Thursday"], [4, -1, "Friday"], [5, -3, "Saturday"], [6, -5, "Sunday"]]
+	#Alerts on Tuesday
+	#daysReference = [[0, 1, "Monday"], [1, 6, "Tuesday"], [2, 4, "Wednesday"], [3, 2, "Thursday"], [4, 0, "Friday"], [5, -2, "Saturday"], [6, -4, "Sunday"]]
+	#Alerts on Wednesday
+	#daysReference = [[0, 2, "Monday"], [1, 0, "Tuesday"], [2, 5, "Wednesday"], [3, 3, "Thursday"], [4, 1, "Friday"], [5, -1, "Saturday"], [6, -3, "Sunday"]]
+	#Alerts on Thursday
+	#daysReference = [[0, 3, "Monday"], [1, 1, "Tuesday"], [2, -1, "Wednesday"], [3, 4, "Thursday"], [4, 2, "Friday"], [5, 0, "Saturday"], [6, -2, "Sunday"]]
+	#Alerts on Friday
+	#daysReference = [[0, 4, "Monday"], [1, 2, "Tuesday"], [2, 0, "Wednesday"], [3, -2, "Thursday"], [4, 3, "Friday"], [5, 1, "Saturday"], [6, -1, "Sunday"]]
+	#Alerts on Saturday
+	#daysReference = [[0, 5, "Monday"], [1, 3, "Tuesday"], [2, 1, "Wednesday"], [3, -1, "Thursday"], [4, -3, "Friday"], [5, 2, "Saturday"], [6, 0, "Sunday"]]
+			
+	for ref in daysReference:
+		if day == ref[0]:
+			day += ref[1]
+			print(f'Today is {ref[2]}')
+			break
+			
+	for ref in daysReference:
+		if ref[0] + ref[1] == 7:
+			print(f'Winners announced on {ref[2]}')
+
+	#Will alert at 1am on whatever day in daysReference where indeces 0 and 1 add up to 7
+	warning_time = (day*86400) - (myTime.hour*3600) - (myTime.minute*60) + 3600 - 14400
+	totalTime = warning_time + 14400
+	print(f'Waiting {warning_time/3600.00:.2f} hours until winner warning')
+	print(f'Waiting {totalTime/3600.00:.2f} hours until next winner announced')
+
+	await asyncio.sleep(warning_time)
+	#This is for testing
+	#await asyncio.sleep(20)
+	print(BEG_YELLOW + "Sending reminder to vote for best vid of the week" + END_YELLOW)
+	await sendTo.send("Get your votes in now for **Best Video of the Week**\nWinner(s) will be announced in 4 hours")
+
+	#First wait the warning time and send warning, then wait another 8 hours and pick winner
+	await asyncio.sleep(14400)
+	#This is for testing
+	#await asyncio.sleep(20)
+	print(BEG_YELLOW + "Announcing best video of the week" + END_YELLOW)
+
+	#Call to calculate the winners and send messages to discord channels
+	ctx = bot.get_context
+	winners = await winner(ctx)
+
+	#This block for adding the winners to the playlist
+	winner_IDs = []
+	for win in winners:
+		vidID = ""
+		for pattern in rePatterns:
+			checkPattern = re.findall(pattern, win[0])
+			if (len(checkPattern) != 0):
+				vidID = checkPattern[0]
+				winner_IDs.append(vidID)
+				break
+				
+	for vid in winner_IDs:
+		try:
+			print(f'Trying to add {vid} to playlist')
+			add_video_to_playlist(credentials, vid, PLAYLIST_ID)
+		except:
+			print(BEG_RED + f'Failed to add video {vid} to playlist {PLAYLIST_ID}' + END_RED) 
+				
+	#Recurse and start calculate/sleep process over
+	await calculateTimeToWinner(credentials)
     
 async def logMessages(channel):
     global link_count
@@ -247,7 +339,9 @@ async def on_ready():
     print("\n" + BEG_BLUE +f'Finished logging {link_count} links in {log_time:.2f}s' + END_BLUE)
     print(BEG_FLASH + f'Listening for new links\n' + END_FLASH)
     
-    await asyncio.wait_for(calculateTimeToWinner(), timeout=604801)
+    credentials = await get_authenticated_service()
+    
+    await asyncio.wait_for(calculateTimeToWinner(credentials), timeout=604801)
     
     #print("on_ready DONE")
     
@@ -275,34 +369,31 @@ def checkLink(info):
         
 @bot.event
 async def on_message(ctx):
-    sendTo = bot.get_channel(sendID)
-    newLink = ctx.content
-    author_id = ctx.author.id
-    author_name = ctx.author
-    creation_date = ctx.created_at.strftime(DATE_FORMAT)
-    
-    #alertMessage = f'<@{author_id}> {newLink} has been posted previously'
-    #Message is from correct channel we want to monitor
-    
-    if ctx.channel.id == getID and newLink.startswith("https://"):
-        vidID = ""
-        for pattern in rePatterns:
-            checkPattern = re.findall(pattern, newLink)
-            if (len(checkPattern) != 0):
-                vidID = checkPattern[0]
-                info = [vidID, author_name, author_id, creation_date]
-                break
-       
-        repeat = checkLink(info)
-        if repeat == True:
-            og_info = vids[vidID]
-            await sendTo.send(f'<@{author_id}> {newLink} was posted by <@{og_info[2]}> on {og_info[3]}')
-            
-    elif ctx.channel.id == sendID and ctx.author == bot.user and newLink == "!winner":
-        #time.sleep(60)
-        await winner(ctx)
-    
-    await bot.process_commands(ctx)
+	repeat = False
+	sendTo = bot.get_channel(sendID)
+	newLink = ctx.content
+	author_id = ctx.author.id
+	author_name = ctx.author
+	creation_date = ctx.created_at.strftime(DATE_FORMAT)
+
+	#alertMessage = f'<@{author_id}> {newLink} has been posted previously'
+	#Message is from correct channel we want to monitor
+
+	if ctx.channel.id == getID and newLink.startswith("https://"):
+		vidID = ""
+		for pattern in rePatterns:
+			checkPattern = re.findall(pattern, newLink)
+			if (len(checkPattern) != 0):
+				vidID = checkPattern[0]
+				info = [vidID, author_name, author_id, creation_date]
+				repeat = checkLink(info)
+				break
+	   
+	if repeat == True:
+		og_info = vids[vidID]
+		await sendTo.send(f'<@{author_id}> {newLink} was posted by <@{og_info[2]}> on {og_info[3]}')
+
+	await bot.process_commands(ctx)
     
 ################################################################################################################################################
 '''All the commands to run from within discord chat below'''
@@ -454,13 +545,15 @@ async def winner(ctx):
             
     else:
         print(BEG_RED + "No reactions found - Unable to calculate winner" + END_RED)
-        await ctx.reply(f'**Big, sad, empy bag of nothing**\n{EMPTY_WINNER}')
+        await sendTo.send(f'**No votes found. Trigger a manual winner with the !winner command**\n{EMPTY_WINNER}')
     
     end_time = time.time()
     log_time = end_time - start_time
     
     if isWinner == True:
         print("\n" + BEG_BLUE +f'Winner of best video of the week computed in {log_time:.2f}s' + END_BLUE)
+        
+    return winners
         
 @bot.command()
 async def kill(ctx):
@@ -472,5 +565,3 @@ bot.run(TOKEN)
 
 
     
-
-
