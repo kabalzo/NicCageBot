@@ -13,5 +13,5 @@ pid
 <<<<<<< HEAD
 *.pyc
 methods.py
-
+*.sh
 
