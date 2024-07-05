@@ -10,7 +10,8 @@ pid
 *.json
 *.pickle
 *.goutputstream*
+<<<<<<< HEAD
 *.pyc
 methods.py
-newBot.py
-auth.py
+
+
