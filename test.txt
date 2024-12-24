@@ -1,0 +1,1 @@
+Testing gihub setup from new ubuntu 24 server
