@@ -58,12 +58,12 @@ BEG_FLASH = '\33[5m'
 END_FLASH = '\33[0m'
 
 #Regex patterns
-DEFAULT_PAT_1 = "https://www.youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)"
-DEFAULT_PAT_2 = "https://youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)[\&].*"
-MOBILE_PAT_1 = "https://youtu.be/([a-zA-Z0-9\_\-]+)\?.+"
-MOBILE_PAT_2 = "https://youtu.be/([a-zA-Z0-9\_\-]+)"
-SHORTS_PAT_1 = "https://www.youtube.com/shorts/([a-zA-Z0-9\_\-]+)"
-SHORTS_PAT_2 = "https://youtube.com/shorts/([a-zA-Z0-9\_\-]+)\?.*"
+DEFAULT_PAT_1 = r"https://www.youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)"
+DEFAULT_PAT_2 = r"https://youtube.com/watch\?[a-zA-Z]\=([a-zA-Z0-9\_\-]+)[\&].*"
+MOBILE_PAT_1 = r"https://youtu.be/([a-zA-Z0-9\_\-]+)\?.+"
+MOBILE_PAT_2 = r"https://youtu.be/([a-zA-Z0-9\_\-]+)"
+SHORTS_PAT_1 = r"https://www.youtube.com/shorts/([a-zA-Z0-9\_\-]+)"
+SHORTS_PAT_2 = r"https://youtube.com/shorts/([a-zA-Z0-9\_\-]+)\?.*"
 
 ################################################################################################################################################
 '''Setup'''
