@@ -15,4 +15,5 @@ pid
 methods.py
 *.sh
 env/
+nicbot/
 !requirements.txt

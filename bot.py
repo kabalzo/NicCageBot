@@ -19,7 +19,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import os.path
 import pickle
-
+import openai
+from openai import OpenAI
 
 #Channel IDs of the two channels in our discord that I use to implement this bot
 f = open("channels.txt", "r")
@@ -339,9 +340,9 @@ async def on_ready():
     print("\n" + BEG_BLUE +f'Finished logging {link_count} links in {log_time:.2f}s' + END_BLUE)
     print(BEG_FLASH + f'Listening for new links\n' + END_FLASH)
     
-    credentials = await get_authenticated_service()
+    #credentials = await get_authenticated_service()
     
-    await asyncio.wait_for(calculateTimeToWinner(credentials), timeout=604801)
+    #await asyncio.wait_for(calculateTimeToWinner(credentials), timeout=604801)
     
     #print("on_ready DONE")
     
@@ -402,8 +403,31 @@ async def on_message(ctx):
 #(ctx, arg)?
 async def test(ctx):
     await ctx.send('```md#Hello```')
-    
 
+@bot.command()
+async def vampire(ctx):    
+    _myQuote = NicCageQuotes[1]
+    myQuote = _myQuote.split("; ")
+    print("Channel Name: " + str(ctx.channel.name) + ", Channel ID: " + str(ctx.channel.id))
+    await ctx.reply(myQuote[0])
+    print('Quote: ' + BEG_GREEN + myQuote[0] + END_GREEN)
+    try:
+        voice = ctx.voice_client.play(discord.FFmpegPCMAudio(str('./sounds/' + myQuote[1].strip())))
+    except:
+        print(BEG_RED + "No active voice channel - Clip not played" + END_RED)
+
+@bot.command()
+async def face(ctx):    
+    _myQuote = NicCageQuotes[20]
+    myQuote = _myQuote.split("; ")
+    print("Channel Name: " + str(ctx.channel.name) + ", Channel ID: " + str(ctx.channel.id))
+    await ctx.reply(myQuote[0])
+    print('Quote: ' + BEG_GREEN + myQuote[0] + END_GREEN)
+    try:
+        voice = ctx.voice_client.play(discord.FFmpegPCMAudio(str('./sounds/' + myQuote[1].strip())))
+    except:
+        print(BEG_RED + "No active voice channel - Clip not played" + END_RED)
+           
 @bot.command()
 async def speak(ctx):
     global lastInt
@@ -554,7 +578,55 @@ async def winner(ctx):
         print("\n" + BEG_BLUE +f'Winner of best video of the week computed in {log_time:.2f}s' + END_BLUE)
         
     return winners
-        
+
+@bot.command()
+async def create(ctx, *, user_prompt: str):
+    #TOKEN = os.getenv("OPEN_AI_KEY")
+    #OpenAI.api_key = TOKEN
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    #image_model = "dall-e-2"
+    image_model = "dall-e-3"
+
+    try:
+        print(BEG_YELLOW + f"Working on request: {user_prompt}" + END_YELLOW)
+        await ctx.reply("I'll see what I can do")
+        response = client.images.generate(
+            model = image_model,
+            prompt = user_prompt,
+            size = "1024x1024",
+            quality = "hd",
+            n = 1,
+            style = "natural"
+        )
+        image_url = response.data[0].url
+        #embed = discord.Embed(title=user_prompt)
+        #embed.set_image(url="image_url")
+        print(BEG_GREEN + image_url + END_GREEN)
+        #myPrompt = "`" + user_prompt + "`" 
+        await ctx.reply(image_url)
+
+    except openai.BadRequestError as e:
+        print(BEG_RED + f"Caught 'Bad Request Error':\n {e}" + END_RED)
+        await ctx.reply("I can't do that")
+
+@bot.command()
+async def ask(ctx, *, question: str):
+    try:
+        print(BEG_YELLOW + f"Working on question: {question}" + END_YELLOW)
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are Nicolas Cage the famous actor and you're a little bit wacky."},
+            {"role": "user", "content": question}
+        ])
+    
+        answer = response.choices[0].message.content
+        print(BEG_GREEN + f'ChatGPT: {answer}' + END_GREEN)
+        await ctx.reply(answer)
+
+    except:
+        print(BEG_RED + "I can't answer that" + END_RED)
+        await ctx.reply("I can't answer that")
 @bot.command()
 async def kill(ctx):
     await ctx.reply("Goodbye cruel world")
