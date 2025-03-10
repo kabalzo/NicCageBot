@@ -17,3 +17,4 @@ methods.py
 env/
 nicbot/
 !requirements.txt
+images/

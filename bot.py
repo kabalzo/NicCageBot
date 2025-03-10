@@ -21,8 +21,10 @@ import os.path
 import pickle
 import openai
 from openai import OpenAI
-#import google.generativeai as genai
 from google import genai
+from google.genai import types
+from PIL import Image
+from io import BytesIO
 
 #Channel IDs of the two channels in our discord that I use to implement this bot
 f = open("channels.txt", "r")
@@ -610,7 +612,7 @@ async def create_openai(ctx, *, user_prompt: str):
     except openai.BadRequestError as e:
         print(BEG_RED + f"Caught 'Bad Request Error':\n {e}" + END_RED)
         await ctx.reply("I can't do that")
-################################################################################################################################################               
+################################################################################################################################################
 @bot.command()
 async def ask_gemini(ctx, *, prompt: str):
     my_role = "You are Nicolas Cage the famous actor. Keep responses somewhat succinct, but still with flair."
@@ -630,8 +632,50 @@ async def ask_gemini(ctx, *, prompt: str):
 
     except Exception as e:
         print(BEG_RED + f"An error occurred: {e}" + END_RED)
-        await ctx.reply("An error occurred while processing your request.")
+        await ctx.reply("An error occurred while processing your request.") 
+################################################################################################################################################               
+@bot.command()
+async def create_gemini(ctx, *, user_prompt: str):
+    directory = "images"
+    names = ["one", "two", "three", "four"]
+    images = []
+    client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
+    
+    try:
+        print(BEG_YELLOW + f"Working on prompt: {user_prompt}" + END_YELLOW)
+        await ctx.reply("I'll see what I can do")
+        response = client.models.generate_images(
+            model='imagen-3.0-generate-002',
+            prompt=user_prompt,
+            config=types.GenerateImagesConfig(
+                number_of_images=4,
+            )
+        )
 
+        for name, generated_image in zip(names, response.generated_images):
+            file_name = f"output_image_{name}.png"
+            file_path = os.path.join(directory, file_name)
+            image = Image.open(BytesIO(generated_image.image.image_bytes))
+
+            with open(file_path, "wb") as file:
+                image.save(file_path)
+            print(f"Image saved as {file_name}")
+
+            if os.path.exists(file_path):
+                with open(file_path, 'rb') as fp:
+                    image_bytes = fp.read()
+                    image_io = BytesIO(image_bytes)
+                    images.append(discord.File(image_io, filename=os.path.basename(file_path)))
+            else:
+                print("Image not found")
+
+        if images:
+            print(BEG_GREEN + f"Completed prompt: {user_prompt}" + END_GREEN)
+            await ctx.reply(files=images)
+
+    except:
+        print(BEG_RED + "I can't do that" + END_RED)
+        await ctx.reply("I can't do that")
 ###############################################################################################################################################               
 @bot.command()
 async def ask_openai(ctx, *, question: str):
@@ -651,6 +695,7 @@ async def ask_openai(ctx, *, question: str):
     except:
         print(BEG_RED + "I can't answer that" + END_RED)
         await ctx.reply("I can't answer that")
+################################################################################################################################################
 @bot.command()
 async def kill(ctx):
     await ctx.reply("Goodbye cruel world")
