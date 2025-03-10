@@ -21,6 +21,8 @@ import os.path
 import pickle
 import openai
 from openai import OpenAI
+#import google.generativeai as genai
+from google import genai
 
 #Channel IDs of the two channels in our discord that I use to implement this bot
 f = open("channels.txt", "r")
@@ -578,9 +580,9 @@ async def winner(ctx):
         print("\n" + BEG_BLUE +f'Winner of best video of the week computed in {log_time:.2f}s' + END_BLUE)
         
     return winners
-
+################################################################################################################################################               
 @bot.command()
-async def create(ctx, *, user_prompt: str):
+async def create_openai(ctx, *, user_prompt: str):
     #TOKEN = os.getenv("OPEN_AI_KEY")
     #OpenAI.api_key = TOKEN
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -608,9 +610,31 @@ async def create(ctx, *, user_prompt: str):
     except openai.BadRequestError as e:
         print(BEG_RED + f"Caught 'Bad Request Error':\n {e}" + END_RED)
         await ctx.reply("I can't do that")
-
+################################################################################################################################################               
 @bot.command()
-async def ask(ctx, *, question: str):
+async def ask_gemini(ctx, *, prompt: str):
+    my_role = "You are Nicolas Cage the famous actor. Keep responses somewhat succinct, but still with flair."
+    my_model = "gemini-2.0-flash"
+    #my_model = "gemini-1.5-flash"
+
+    try:
+        print(BEG_YELLOW + f"Working on question: {prompt}" + END_YELLOW)
+        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
+        full_prompt = my_role + prompt #Concatenate the role and prompt.
+
+        response = client.models.generate_content(model=my_model, contents=full_prompt)
+
+        print(BEG_YELLOW + f"Gemini response: {response.text}" + END_YELLOW)
+        await ctx.reply(response.text)
+
+    except Exception as e:
+        print(BEG_RED + f"An error occurred: {e}" + END_RED)
+        await ctx.reply("An error occurred while processing your request.")
+
+###############################################################################################################################################               
+@bot.command()
+async def ask_openai(ctx, *, question: str):
     try:
         print(BEG_YELLOW + f"Working on question: {question}" + END_YELLOW)
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
