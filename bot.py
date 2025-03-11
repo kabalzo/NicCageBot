@@ -6,6 +6,7 @@ import time
 import re
 import discord
 from discord.ext import commands
+from discord import app_commands
 import os
 from dotenv import load_dotenv
 import datetime
@@ -87,7 +88,9 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
+#bot.tree = app_commands.CommandTree(bot)
 intents.message_content = True
+#GUILD_ID = 456511756605587476
 
 lastInt = -1
 vids = {}
@@ -329,27 +332,30 @@ async def logMessages(channel):
 ################################################################################################################################################
 @bot.event
 async def on_ready():
+    await bot.tree.sync()
+    #await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
     start_time = time.time()
     #Get the channel from which to monitor repeat posts
     channel = bot.get_channel(getID)
-    
+
     print(f'User name: {bot.user.name} - ID: {str(bot.user.id)}')
     print('We have logged in as {0.user}\n'.format(bot))
     print(BEG_BLUE + "Starting link history log..." + END_BLUE + "\n")
-    
+
     await logMessages(channel)
-                
+
     end_time = time.time()
     log_time = end_time - start_time
     print("\n" + BEG_BLUE +f'Finished logging {link_count} links in {log_time:.2f}s' + END_BLUE)
     print(BEG_FLASH + f'Listening for new links\n' + END_FLASH)
-    
+
+    #TODO: Commented out below because Google auth doesn't work without a browser
     #credentials = await get_authenticated_service()
-    
+
     #await asyncio.wait_for(calculateTimeToWinner(credentials), timeout=604801)
-    
+
     #print("on_ready DONE")
-    
+
 ################################################################################################################################################
 def checkLink(info):
     global link_count
@@ -403,12 +409,14 @@ async def on_message(ctx):
 ################################################################################################################################################
 '''All the commands to run from within discord chat below'''
 ################################################################################################################################################
+'''
 @bot.command()
-#(ctx, arg)?
 async def test(ctx):
     await ctx.send('```md#Hello```')
-
-@bot.command()
+'''
+################################################################################################################################################
+@bot.tree.command(name="vampire", description="Sends the vampire Nic Cage quote")
+#@bot.command()
 async def vampire(ctx):    
     _myQuote = NicCageQuotes[1]
     myQuote = _myQuote.split("; ")
@@ -419,9 +427,10 @@ async def vampire(ctx):
         voice = ctx.voice_client.play(discord.FFmpegPCMAudio(str('./sounds/' + myQuote[1].strip())))
     except:
         print(BEG_RED + "No active voice channel - Clip not played" + END_RED)
-
-@bot.command()
-async def face(ctx):    
+################################################################################################################################################
+@bot.tree.command(name="face", description="Sends the face Nic Cage quote")
+#@bot.command()
+async def face(ctx):
     _myQuote = NicCageQuotes[20]
     myQuote = _myQuote.split("; ")
     print("Channel Name: " + str(ctx.channel.name) + ", Channel ID: " + str(ctx.channel.id))
@@ -431,8 +440,9 @@ async def face(ctx):
         voice = ctx.voice_client.play(discord.FFmpegPCMAudio(str('./sounds/' + myQuote[1].strip())))
     except:
         print(BEG_RED + "No active voice channel - Clip not played" + END_RED)
-           
-@bot.command()
+################################################################################################################################################
+@bot.tree.command(name="speak", description="Sends a random Nic Cage quote")
+#@bot.command()
 async def speak(ctx):
     global lastInt
     #Prevent the same quote/clip from being played twice in a row
@@ -452,41 +462,43 @@ async def speak(ctx):
             except:
                 print(BEG_RED + "No active voice channel - Clip not played" + END_RED)
             break
-            
 ################################################################################################################################################
+'''
+@bot.tree.command(name="vampire", description="Sends a random Nicolas Cage quote.")
 @bot.command()
 async def helpme(ctx):
        await ctx.reply("Commands: !join !qjoin !leave !qleave !speak !helpme !gif")
-       
+'''
 ################################################################################################################################################
-@bot.command()
-async def gif(ctx):
+@bot.tree.command(name="gif", description="Sends a random Nicolas Cage GIF")
+#@bot.command()
+async def gif(interaction: discord.Interaction,):
     randomGif = random.randint(0,3)
-    await ctx.reply(gifs[randomGif])
-    
+    await interaction.response.send_message(gifs[randomGif])
 ################################################################################################################################################
-@bot.command()
+@bot.tree.command(name="join", description="Nic Cage bot joins youra active voice channel")
+#@bot.command()
 async def join(ctx):
     try:
         voice = await ctx.author.voice.channel.connect()
-        await ctx.reply("Nic is here to party, woo! (!helpme)")
+        await ctx.reply("Nic is here to party, woo!")
         voice.play(discord.FFmpegPCMAudio('./sounds/woo.mp3'))
     except:
         print(BEG_RED + "No members active in voice channel - Channel not joined" + END_RED)
         await ctx.reply("I can't join a voice channel without any active members")
-        
 ################################################################################################################################################
-@bot.command()
+@bot.tree.command(name="qjoin", description="Nic Cage bot SILENTLY joins your active voice channel")
+#@bot.command()
 async def qjoin(ctx):
     try:
         voice = await ctx.author.voice.channel.connect()
-        await ctx.reply("Nic is here to party, woo! (!helpme)")
+        await ctx.reply("Nic is here to party, woo!")
     except:
         print(BEG_RED + "No members active in voice channel - Channel not joined" + END_RED)
         await ctx.reply("I can't join a voice channel without any active members")
-        
 ################################################################################################################################################
-@bot.command()
+@bot.tree.command(name="leave", description="Nic Cage bot leaves your active voice channel")
+#@bot.command()
 async def leave(ctx):
     try:
         voice = ctx.voice_client.play(discord.FFmpegPCMAudio('./sounds/silence.mp3'))
@@ -495,9 +507,9 @@ async def leave(ctx):
         voice = await ctx.voice_client.disconnect()
     except:
         await ctx.reply("I'm not in any channels genious")
-        
 ################################################################################################################################################
-@bot.command()
+@bot.tree.command(name="qleave", description="Nic Cage bot SILENTLY joins your active voice channel ")
+#@bot.command()
 async def qleave(ctx):
     try:
         await ctx.reply("Hurray for the sounds of fucking silence")
@@ -505,10 +517,10 @@ async def qleave(ctx):
         voice = await ctx.voice_client.disconnect()
     except:
         await ctx.reply("I'm not in any channels genious")
-        
 ################################################################################################################################################
-@bot.command()
-async def winner(ctx):
+@bot.tree.command(name="winner", description="Auto-picks best video of the week (currently broken)")
+#@bot.command()
+async def winner(interaction: discord.Interaction):
     print(BEG_YELLOW + "Determining winner..." + END_YELLOW)
     sendTo = bot.get_channel(sendID)
     start_time = time.time()
@@ -516,32 +528,32 @@ async def winner(ctx):
     winners = []
     mostReactions = 0
     isWinner = False
-    
+
     async for message in channel.history(limit=None):
         isGoodLink = False
         newMessage = message.content
-        
+
         if newMessage.startswith("Winner:") or newMessage.startswith("**Winner:"):
             break
-            
+
         elif (newMessage is not None and newMessage.startswith("https")):
             author_name = message.author
             author_id = message.author.id
             creation_date = message.created_at.strftime(DATE_FORMAT)
             reactions = message.reactions
             reactionCount = 0
-            
+
             if len(reactions) != 0:
                 for reaction in reactions:
                     #print(reactions)
                     #print(type(reactions[0]))
                     #print(reactions[0].count)
                     reactionCount += reaction.count
-                    
+
                 if reactionCount > mostReactions:
                     #print("Found winner with higher total count. Winners reset.")
                     winners = []
-                    
+
                 if reactionCount >= mostReactions:
                     #print(f'Reaction count {reactionCount} Most reactions {mostReactions}')
                     mostReactions = reactionCount
@@ -549,12 +561,12 @@ async def winner(ctx):
                     title = title.split(" - YouTube")[0]
                     winners.append([newMessage, title, reactionCount, author_id])
                     #print(f'Video added to winner. There are {reactionCount} reactions for {title}')
-                    
+
     #print(winners)
     winningAuthors = "Congrats on winning best vid of the week: "
     numWinners = len(winners)
     winCount = 1
-    
+
     if mostReactions != 0:
         isWinner = True
         winningTitles = ""
@@ -565,36 +577,58 @@ async def winner(ctx):
             if winCount <= numWinners:
                 winningTitles += "\n"
                 winningAuthors += " & "
-                
+
         print(f'Winning video(s): {winningTitles}')
         #if  not ctx.channel.id == getID:
             #await ctx.reply(f'**Winner:**\n\n{winningTitles}\n\n{winningAuthors}')
         await channel.send(f'**Winner:**\n\n{winningTitles}\n\n{winningAuthors}')
-            
+
     else:
         print(BEG_RED + "No reactions found - Unable to calculate winner" + END_RED)
         await sendTo.send(f'**No votes found. Trigger a manual winner with the !winner command**\n{EMPTY_WINNER}')
-    
+
     end_time = time.time()
     log_time = end_time - start_time
-    
+
     if isWinner == True:
         print("\n" + BEG_BLUE +f'Winner of best video of the week computed in {log_time:.2f}s' + END_BLUE)
-        
+
     return winners
+################################################################################################################################################
+@bot.tree.command(name="ask_openai", description="Responds to a prompt using OpenAI (ChatGPT)")
+#@bot.command()
+async def ask_openai(interaction: discord.Interaction, question: str):
+    await interaction.response.defer()
+    try:
+        print(BEG_YELLOW + f"Working on question: {question}" + END_YELLOW)
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are Nicolas Cage the famous actor and you're a little bit wacky."},
+            {"role": "user", "content": question}
+        ])
+
+        answer = response.choices[0].message.content
+        print(BEG_GREEN + f'ChatGPT: {answer}' + END_GREEN)
+        await interaction.followup.send(answer)
+
+    except:
+        print(BEG_RED + "I can't answer that" + END_RED)
+        await interaction.followup.send("I can't answer that")
 ################################################################################################################################################               
-@bot.command()
-async def create_openai(ctx, *, user_prompt: str):
-    #TOKEN = os.getenv("OPEN_AI_KEY")
-    #OpenAI.api_key = TOKEN
+@bot.tree.command(name="create_openai", description="Creates images from a prompt using OpenAI (ChatGPT)")
+#@bot.command()
+async def create_openai(interaction: discord.Interaction, user_prompt: str):
+    await interaction.response.defer()
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     #image_model = "dall-e-2"
     image_model = "dall-e-3"
 
     try:
         print(BEG_YELLOW + f"Working on request: {user_prompt}" + END_YELLOW)
-        await ctx.reply("I'll see what I can do")
-        response = client.images.generate(
+        #Interaction has already been responded to error
+        #await interaction.response.send_message("I'll see what I can do")
+        my_response = client.images.generate(
             model = image_model,
             prompt = user_prompt,
             size = "1024x1024",
@@ -602,19 +636,21 @@ async def create_openai(ctx, *, user_prompt: str):
             n = 1,
             style = "natural"
         )
-        image_url = response.data[0].url
+        image_url = my_response.data[0].url
         #embed = discord.Embed(title=user_prompt)
         #embed.set_image(url="image_url")
         print(BEG_GREEN + image_url + END_GREEN)
         #myPrompt = "`" + user_prompt + "`" 
-        await ctx.reply(image_url)
+        await interaction.followup.send(image_url)
 
     except openai.BadRequestError as e:
         print(BEG_RED + f"Caught 'Bad Request Error':\n {e}" + END_RED)
-        await ctx.reply("I can't do that")
+        await interaction.followup.send("I can't do that")
 ################################################################################################################################################
-@bot.command()
-async def ask_gemini(ctx, *, prompt: str):
+@bot.tree.command(name="ask_gemini", description="Responds to a prompt using using Google Gemini")
+#@bot.command()
+async def ask_gemini(interaction: discord.Interaction, prompt: str):
+    await interaction.response.defer()
     my_role = "You are Nicolas Cage the famous actor. Keep responses somewhat succinct, but still with flair."
     my_model = "gemini-2.0-flash"
     #my_model = "gemini-1.5-flash"
@@ -628,23 +664,28 @@ async def ask_gemini(ctx, *, prompt: str):
         response = client.models.generate_content(model=my_model, contents=full_prompt)
 
         print(BEG_YELLOW + f"Gemini response: {response.text}" + END_YELLOW)
-        await ctx.reply(response.text)
+        await interaction.followup.send(response.text)
+        #await ctx.reply(response.text)
 
     except Exception as e:
         print(BEG_RED + f"An error occurred: {e}" + END_RED)
-        await ctx.reply("An error occurred while processing your request.") 
-################################################################################################################################################               
-@bot.command()
-async def create_gemini(ctx, *, user_prompt: str):
+        await interaction.followup.send("An error occurred while processing your request.")
+        #await ctx.reply("An error occurred while processing your request.") 
+################################################################################################################################################
+@bot.tree.command(name="create_gemini", description="Creates images from a prompt using Google Gemini")
+#@bot.command()
+async def create_gemini(interaction: discord.Interaction, user_prompt: str):
+    await interaction.response.defer()
     directory = "images"
     names = ["one", "two", "three", "four"]
     images = []
     client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
-    
+
     try:
         print(BEG_YELLOW + f"Working on prompt: {user_prompt}" + END_YELLOW)
-        await ctx.reply("I'll see what I can do")
-        response = client.models.generate_images(
+        #Interaction has already been responded to error
+        #await interaction.response.send_message("I'll see what I can do")
+        my_response = client.models.generate_images(
             model='imagen-3.0-generate-002',
             prompt=user_prompt,
             config=types.GenerateImagesConfig(
@@ -652,7 +693,7 @@ async def create_gemini(ctx, *, user_prompt: str):
             )
         )
 
-        for name, generated_image in zip(names, response.generated_images):
+        for name, generated_image in zip(names, my_response.generated_images):
             file_name = f"output_image_{name}.png"
             file_path = os.path.join(directory, file_name)
             image = Image.open(BytesIO(generated_image.image.image_bytes))
@@ -671,35 +712,17 @@ async def create_gemini(ctx, *, user_prompt: str):
 
         if images:
             print(BEG_GREEN + f"Completed prompt: {user_prompt}" + END_GREEN)
-            await ctx.reply(files=images)
+            await interaction.followup.send(files=images)
 
     except:
         print(BEG_RED + "I can't do that" + END_RED)
-        await ctx.reply("I can't do that")
-###############################################################################################################################################               
-@bot.command()
-async def ask_openai(ctx, *, question: str):
-    try:
-        print(BEG_YELLOW + f"Working on question: {question}" + END_YELLOW)
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        response = client.chat.completions.create(model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are Nicolas Cage the famous actor and you're a little bit wacky."},
-            {"role": "user", "content": question}
-        ])
-    
-        answer = response.choices[0].message.content
-        print(BEG_GREEN + f'ChatGPT: {answer}' + END_GREEN)
-        await ctx.reply(answer)
-
-    except:
-        print(BEG_RED + "I can't answer that" + END_RED)
-        await ctx.reply("I can't answer that")
-################################################################################################################################################
-@bot.command()
-async def kill(ctx):
-    await ctx.reply("Goodbye cruel world")
+        await interaction.followup.send("I can't do that")
+###############################################################################################################################################
+@bot.tree.command(name="kill", description="Turn off the bot with a command")
+#@bot.command()
+async def kill(interaction: discord.Interaction,):
+    await interaction.response.send_message("Goodbye cruel world")
     print("Attempting to shut down program")
     quit()
-################################################################################################################################################               
-bot.run(TOKEN)    
+################################################################################################################################################
+bot.run(TOKEN)
