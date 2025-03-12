@@ -421,7 +421,7 @@ async def vampire(interaction: discord.Interaction):
     await interaction.response.defer()  # Prevents timeout
 
     myQuote = NicCageQuotes[1].split("; ")
-    print("Channel Name: " + str(interaction.channel.name) + ", Channel ID: " + str(interaction.channel.id))
+    #print("Channel Name: " + str(interaction.channel.name) + ", Channel ID: " + str(interaction.channel.id))
     print('Quote: ' + BEG_GREEN + myQuote[0] + END_GREEN)
 
     if not voice_client.is_playing():
@@ -444,7 +444,7 @@ async def face(interaction: discord.Interaction):
     await interaction.response.defer()  # Prevents timeout
 
     myQuote = NicCageQuotes[20].split("; ")
-    print("Channel Name: " + str(interaction.channel.name) + ", Channel ID: " + str(interaction.channel.id))
+    #print("Channel Name: " + str(interaction.channel.name) + ", Channel ID: " + str(interaction.channel.id))
     print('Quote: ' + BEG_GREEN + myQuote[0] + END_GREEN)
 
     if not voice_client.is_playing():
@@ -481,7 +481,7 @@ async def speak(interaction: discord.Interaction):
         elif voice_client != None and myRandomInt != lastInt:
             if not voice_client.is_playing():
                 myQuote = NicCageQuotes[myRandomInt].split("; ")
-                print("Channel Name: " + str(interaction.channel.name) + ", Channel ID: " + str(interaction.channel.id))
+                #print("Channel Name: " + str(interaction.channel.name) + ", Channel ID: " + str(interaction.channel.id))
                 print('Quote: ' + BEG_GREEN + myQuote[0] + END_GREEN)
                 voice_client.play(discord.FFmpegPCMAudio(str('./sounds/' + myQuote[1].strip())))
                 await interaction.followup.send(myQuote[0])
@@ -493,7 +493,7 @@ async def speak(interaction: discord.Interaction):
 
         elif voice_client == None and myRandomInt != lastInt:
             myQuote = NicCageQuotes[myRandomInt].split("; ")
-            print("Channel Name: " + str(interaction.channel.name) + ", Channel ID: " + str(interaction.channel.id))
+            #print("Channel Name: " + str(interaction.channel.name) + ", Channel ID: " + str(interaction.channel.id))
             print('Quote: ' + BEG_GREEN + myQuote[0] + END_GREEN)
             await interaction.followup.send(myQuote[0])
             break
@@ -662,7 +662,7 @@ async def winner(interaction: discord.Interaction):
 
     else:
         print(BEG_RED + "No reactions found - Unable to calculate winner" + END_RED)
-        await sendTo.send(f'**No votes found. Trigger a manual winner with the !winner command**\n{EMPTY_WINNER}')
+        await sendTo.send(f'**No votes found. Trigger a manual winner with the /winner command**\n{EMPTY_WINNER}')
 
     end_time = time.time()
     log_time = end_time - start_time
