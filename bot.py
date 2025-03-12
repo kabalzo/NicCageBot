@@ -399,76 +399,107 @@ async def on_message(ctx):
                 info = [vidID, author_name, author_id, creation_date]
                 repeat = checkLink(info)
                 break
-       
+
     if repeat == True:
         og_info = vids[vidID]
         await sendTo.send(f'<@{author_id}> {newLink} was posted by <@{og_info[2]}> on {og_info[3]}')
 
     await bot.process_commands(ctx)
-    
 ################################################################################################################################################
 '''All the commands to run from within discord chat below'''
 ################################################################################################################################################
-'''
-@bot.command()
-async def test(ctx):
-    await ctx.send('```md#Hello```')
-'''
-################################################################################################################################################
 @bot.tree.command(name="vampire", description="Sends the vampire Nic Cage quote")
 #@bot.command()
-async def vampire(ctx):    
-    _myQuote = NicCageQuotes[1]
-    myQuote = _myQuote.split("; ")
-    print("Channel Name: " + str(ctx.channel.name) + ", Channel ID: " + str(ctx.channel.id))
-    await ctx.reply(myQuote[0])
+async def vampire(interaction: discord.Interaction):
+    voice_channel = interaction.user.voice.channel
+    voice_client = interaction.guild.voice_client
+    if voice_client.channel != voice_channel:
+        print("already in another voice channel")
+        await interaction.response.send_message("I'm already in another voice channel!", ephemeral=True)
+        return
+
+    await interaction.response.defer()  # Prevents timeout
+
+    myQuote = NicCageQuotes[1].split("; ")
+    print("Channel Name: " + str(interaction.channel.name) + ", Channel ID: " + str(interaction.channel.id))
     print('Quote: ' + BEG_GREEN + myQuote[0] + END_GREEN)
-    try:
-        voice = ctx.voice_client.play(discord.FFmpegPCMAudio(str('./sounds/' + myQuote[1].strip())))
-    except:
-        print(BEG_RED + "No active voice channel - Clip not played" + END_RED)
+
+    if not voice_client.is_playing():
+        voice_client.play(discord.FFmpegPCMAudio(str('./sounds/' + myQuote[1].strip())))
+        await interaction.followup.send(myQuote[0])
+    else:
+        print("Already playing audio")
+        await interaction.followup.send("I'm already playing audio!")
 ################################################################################################################################################
 @bot.tree.command(name="face", description="Sends the face Nic Cage quote")
 #@bot.command()
-async def face(ctx):
-    _myQuote = NicCageQuotes[20]
-    myQuote = _myQuote.split("; ")
-    print("Channel Name: " + str(ctx.channel.name) + ", Channel ID: " + str(ctx.channel.id))
-    await ctx.reply(myQuote[0])
+async def face(interaction: discord.Interaction):
+    voice_channel = interaction.user.voice.channel
+    voice_client = interaction.guild.voice_client
+    if voice_client.channel != voice_channel:
+        print("already in another voice channel")
+        await interaction.response.send_message("I'm already in another voice channel!", ephemeral=True)
+        return
+
+    await interaction.response.defer()  # Prevents timeout
+
+    myQuote = NicCageQuotes[20].split("; ")
+    print("Channel Name: " + str(interaction.channel.name) + ", Channel ID: " + str(interaction.channel.id))
     print('Quote: ' + BEG_GREEN + myQuote[0] + END_GREEN)
-    try:
-        voice = ctx.voice_client.play(discord.FFmpegPCMAudio(str('./sounds/' + myQuote[1].strip())))
-    except:
-        print(BEG_RED + "No active voice channel - Clip not played" + END_RED)
+
+    if not voice_client.is_playing():
+        voice_client.play(discord.FFmpegPCMAudio(str('./sounds/' + myQuote[1].strip())))
+        await interaction.followup.send(myQuote[0])
+    else:
+        print("Already playing audio")
+        await interaction.followup.send("I'm already playing audio!")
 ################################################################################################################################################
 @bot.tree.command(name="speak", description="Sends a random Nic Cage quote")
 #@bot.command()
-async def speak(ctx):
+async def speak(interaction: discord.Interaction):
     global lastInt
-    #Prevent the same quote/clip from being played twice in a row
     myRandomInt = getRandomInt()
+
+    try:
+        voice_channel = interaction.user.voice.channel
+    except:
+        voice_channel = None
+    try:
+        voice_client = interaction.guild.voice_client
+    except:
+        voice_client = None
+    await interaction.response.defer()  # Prevents timeout
+
+    #Prevent the same quote/clip from being played twice in a row
     while (True):
-        if (myRandomInt == lastInt):
-            myRandomInt = getRandomInt()
-        else:
+        if voice_client != None and myRandomInt != lastInt and voice_client.channel != voice_channel:
             lastInt = myRandomInt
-            _myQuote = NicCageQuotes[myRandomInt]
-            myQuote = _myQuote.split("; ")
-            print("Channel Name: " + str(ctx.channel.name) + ", Channel ID: " + str(ctx.channel.id))
-            await ctx.reply(myQuote[0])
+            print("already in another voice channel")
+            await interaction.followup.send("I'm already in another voice channel!", ephemeral=True)
+            return
+
+        elif voice_client != None and myRandomInt != lastInt:
+            if not voice_client.is_playing():
+                myQuote = NicCageQuotes[myRandomInt].split("; ")
+                print("Channel Name: " + str(interaction.channel.name) + ", Channel ID: " + str(interaction.channel.id))
+                print('Quote: ' + BEG_GREEN + myQuote[0] + END_GREEN)
+                voice_client.play(discord.FFmpegPCMAudio(str('./sounds/' + myQuote[1].strip())))
+                await interaction.followup.send(myQuote[0])
+                break
+
+            else:
+                print("Already playing audio")
+                await interaction.followup.send("I'm already playing audio!")
+
+        elif voice_client == None and myRandomInt != lastInt:
+            myQuote = NicCageQuotes[myRandomInt].split("; ")
+            print("Channel Name: " + str(interaction.channel.name) + ", Channel ID: " + str(interaction.channel.id))
             print('Quote: ' + BEG_GREEN + myQuote[0] + END_GREEN)
-            try:
-                voice = ctx.voice_client.play(discord.FFmpegPCMAudio(str('./sounds/' + myQuote[1].strip())))
-            except:
-                print(BEG_RED + "No active voice channel - Clip not played" + END_RED)
+            await interaction.followup.send(myQuote[0])
             break
-################################################################################################################################################
-'''
-@bot.tree.command(name="vampire", description="Sends a random Nicolas Cage quote.")
-@bot.command()
-async def helpme(ctx):
-       await ctx.reply("Commands: !join !qjoin !leave !qleave !speak !helpme !gif")
-'''
+
+        else:
+            myRandomInt = getRandomInt()
 ################################################################################################################################################
 @bot.tree.command(name="gif", description="Sends a random Nicolas Cage GIF")
 #@bot.command()
@@ -478,45 +509,91 @@ async def gif(interaction: discord.Interaction,):
 ################################################################################################################################################
 @bot.tree.command(name="join", description="Nic Cage bot joins youra active voice channel")
 #@bot.command()
-async def join(ctx):
-    try:
-        voice = await ctx.author.voice.channel.connect()
-        await ctx.reply("Nic is here to party, woo!")
-        voice.play(discord.FFmpegPCMAudio('./sounds/woo.mp3'))
-    except:
-        print(BEG_RED + "No members active in voice channel - Channel not joined" + END_RED)
-        await ctx.reply("I can't join a voice channel without any active members")
+async def join(interaction: discord.Interaction):
+    # Check if the user is in a voice channel
+    if interaction.user.voice and interaction.user.voice.channel:
+        voice_channel = interaction.user.voice.channel
+
+        # Check if the bot is already connected
+        if interaction.guild.voice_client:
+            print("Already in a voice channel")
+            return await interaction.response.send_message("I'm already in a voice channel!", ephemeral=True)
+
+        # Connect to the voice channel
+        await interaction.response.defer()  # Prevents timeout
+        voice_client = await voice_channel.connect()
+        time.sleep(5)
+        voice_client.play(discord.FFmpegPCMAudio('./sounds/woo.mp3'))
+        await interaction.followup.send(f"Nic is here to party, woo!")
+
+    else:
+        await interaction.response.send_message("You must be in a voice channel to use this command")
 ################################################################################################################################################
 @bot.tree.command(name="qjoin", description="Nic Cage bot SILENTLY joins your active voice channel")
 #@bot.command()
-async def qjoin(ctx):
-    try:
-        voice = await ctx.author.voice.channel.connect()
-        await ctx.reply("Nic is here to party, woo!")
-    except:
-        print(BEG_RED + "No members active in voice channel - Channel not joined" + END_RED)
-        await ctx.reply("I can't join a voice channel without any active members")
+async def qjoin(interaction: discord.Interaction):
+    # Check if the user is in a voice channel
+    if interaction.user.voice and interaction.user.voice.channel:
+        voice_channel = interaction.user.voice.channel
+
+        # Check if the bot is already connected
+        if interaction.guild.voice_client:
+            print("Already in a voice channel")
+            return await interaction.response.send_message("I'm already in a voice channel!", ephemeral=True)
+
+        # Connect to the voice channel
+        await interaction.response.defer()  # Prevents timeout
+        voice_client = await voice_channel.connect()
+        time.sleep(5)
+        #voice_client.play(discord.FFmpegPCMAudio('./sounds/woo.mp3'))
+        await interaction.followup.send(f"Nic is here to party, woo!")
+
+    else:
+        await interaction.response.send_message("You must be in a voice channel to use this command!", ephemeral=True)
 ################################################################################################################################################
 @bot.tree.command(name="leave", description="Nic Cage bot leaves your active voice channel")
 #@bot.command()
-async def leave(ctx):
-    try:
-        voice = ctx.voice_client.play(discord.FFmpegPCMAudio('./sounds/silence.mp3'))
-        await ctx.reply("Hurray for the sounds of fucking silence")
+async def leave(interaction: discord.Interaction):
+    guild = interaction.guild
+    voice_channel = interaction.user.voice.channel
+    voice_client = discord.utils.get(bot.voice_clients, guild=guild)
+
+    if not guild:
+        await interaction.response.send_message("This command must be used in a server.")
+        return
+
+    if voice_client and voice_client.is_connected():
+        await interaction.response.defer()  # Prevents timeout
+        voice_client.play(discord.FFmpegPCMAudio('./sounds/silence.mp3'))
+        await interaction.followup.send("Hurray for the sounds of fucking silence")
+        print("Leaving channel")
         time.sleep(5)
-        voice = await ctx.voice_client.disconnect()
-    except:
-        await ctx.reply("I'm not in any channels genious")
+        await voice_client.disconnect()
+
+    else:
+        await interaction.response.send_message("I'm not in a voice channel!")
 ################################################################################################################################################
 @bot.tree.command(name="qleave", description="Nic Cage bot SILENTLY joins your active voice channel ")
 #@bot.command()
-async def qleave(ctx):
-    try:
-        await ctx.reply("Hurray for the sounds of fucking silence")
+async def qleave(interaction: discord.Interaction):
+    guild = interaction.guild
+    voice_channel = interaction.user.voice.channel
+    voice_client = discord.utils.get(bot.voice_clients, guild=guild)
+
+    if not guild:
+        await interaction.response.send_message("This command must be used in a server.")
+        return
+
+    if voice_client and voice_client.is_connected():
+        await interaction.response.defer()  # Prevents timeout
+        #voice_client.play(discord.FFmpegPCMAudio('./sounds/silence.mp3'))
+        await interaction.followup.send("Hurray for the sounds of fucking silence")
+        print("Leaving channel")
         time.sleep(5)
-        voice = await ctx.voice_client.disconnect()
-    except:
-        await ctx.reply("I'm not in any channels genious")
+        await voice_client.disconnect()
+
+    else:
+        await interaction.response.send_message("I'm not in a voice channel!")
 ################################################################################################################################################
 @bot.tree.command(name="winner", description="Auto-picks best video of the week (currently broken)")
 #@bot.command()
