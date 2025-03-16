@@ -413,6 +413,11 @@ async def on_message(ctx):
 async def help(interaction: discord.Interaction,):
     await interaction.response.send_message("`" + "/vampire\n/face\n/speak\n/gif\n/join\n/qjoin\n/leave\n/qleave\n/winner\n/ask_openai\n/ask_gemini\n/create_openai\n/create_gemini\n/kill" + "`")
 ################################################################################################################################################
+@bot.tree.command(name="movieboys", description="Displays movieboys.us link")
+#@bot.command()
+async def movieboys(interaction: discord.Interaction,):
+    await interaction.response.send_message("https://movieboys.us")
+################################################################################################################################################
 @bot.tree.command(name="vampire", description="Sends the vampire Nic Cage quote")
 #@bot.command()
 async def vampire(interaction: discord.Interaction):
