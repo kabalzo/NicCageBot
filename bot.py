@@ -408,6 +408,11 @@ async def on_message(ctx):
 ################################################################################################################################################
 '''All the commands to run from within discord chat below'''
 ################################################################################################################################################
+@bot.tree.command(name="help", description="Get the bot commands")
+#@bot.command()
+async def help(interaction: discord.Interaction,):
+    await interaction.response.send_message("`" + "/vampire\n/face\n/speak\n/gif\n/join\n/qjoin\n/leave\n/qleave\n/winner\n/ask_openai\n/ask_gemini\n/create_openai\n/create_gemini\n/kill" + "`")
+################################################################################################################################################
 @bot.tree.command(name="vampire", description="Sends the vampire Nic Cage quote")
 #@bot.command()
 async def vampire(interaction: discord.Interaction):
