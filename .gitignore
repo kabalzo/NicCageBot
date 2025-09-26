@@ -18,3 +18,4 @@ env/
 nicbot/
 !requirements.txt
 images/
+*.db
