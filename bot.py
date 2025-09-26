@@ -26,6 +26,7 @@ from google import genai
 from google.genai import types
 from PIL import Image
 from io import BytesIO
+import sqlite3
 
 #Channel IDs of the two channels in our discord that I use to implement this bot
 f = open("channels.txt", "r")
@@ -377,7 +378,7 @@ def checkLink(info):
         vids.update({vidID : log_item})
         print(f"New link: '{vidID}' has been logged")
         return False
-        
+
 @bot.event
 async def on_message(ctx):
     repeat = False
@@ -408,10 +409,29 @@ async def on_message(ctx):
 ################################################################################################################################################
 '''All the commands to run from within discord chat below'''
 ################################################################################################################################################
+'''
+    my_bot_commands = {"/movieboys":"Displays the movieboys.us url",
+                  "/winner":"Computes a winner for best video of the week (playlist functionality currently not working",
+                  "/speak":"Return a random Nic Cage quote as a reply. Voice clip if bot has joined a voice channel",
+                  "/join":"Joins the voice channel of the user who triggered command, plays audio clip",
+                  "/qjoin":"Joins the voice channel of the user who triggered command, no audio clip",
+                  "/leave":"Leaves the voice channel if joined, plays audio clip",
+                  "/qleave":"Leaves the voice channel if joined, no audio clip",
+                  "/ask_openai":"Returns answer to a prompt from ChatPGT using Nic Cage as the persona",
+                  "/ask_gemini":"Returns answer to a prompt from Google Gemini using Nic Cage as the persona",
+                  "/create_openai":"Returns a single image based on prompt from ChatPGT using Nic Cage as the persona",
+                  "/create_openai":"Returns 4 images based on prompt from Google Gemini using Nic Cage as the persona",
+                  "/vampire":"Like /speak but always returns vampire quote from Vampire's Kiss",
+                  "/face":"Like /speak but always returns face quote quote from Face/Off",
+                  "/gif":"Send a random Nic Cage gif",
+                  "/kill":"Authroized users can turn off the bot with a command"
+    }
+'''
+################################################################################################################################################
 @bot.tree.command(name="help", description="Get the bot commands")
 #@bot.command()
 async def help(interaction: discord.Interaction,):
-    await interaction.response.send_message("`" + "/vampire\n/face\n/speak\n/gif\n/join\n/qjoin\n/leave\n/qleave\n/winner\n/ask_openai\n/ask_gemini\n/create_openai\n/create_gemini\n/kill" + "`")
+    await interaction.response.send_message("`" + "/movieboys\n/winner\n/speak\n/join\n/qjoin\n/leave\n/qleave\n/ask_openai\n/ask_gemini\n/create_openai\n/create_gemini\n/vampire\n/face\n/gif\n/kill" + "`")
 ################################################################################################################################################
 @bot.tree.command(name="movieboys", description="Displays movieboys.us link")
 #@bot.command()
@@ -444,22 +464,26 @@ async def vampire(interaction: discord.Interaction):
 @bot.tree.command(name="face", description="Sends the face Nic Cage quote")
 #@bot.command()
 async def face(interaction: discord.Interaction):
-    voice_channel = interaction.user.voice.channel
-    voice_client = interaction.guild.voice_client
-    if voice_client.channel != voice_channel:
-        print("already in another voice channel")
-        await interaction.response.send_message("I'm already in another voice channel!", ephemeral=True)
-        return
-
+    myQuote = NicCageQuotes[20].split("; ")
+    try:
+        voice_channel = interaction.user.voice.channel
+    except:
+        voice_channel = None
+    try:
+        voice_client = interaction.guild.voice_client
+    except:
+        voice_client = None
     await interaction.response.defer()  # Prevents timeout
 
-    myQuote = NicCageQuotes[20].split("; ")
-    #print("Channel Name: " + str(interaction.channel.name) + ", Channel ID: " + str(interaction.channel.id))
-    print('Quote: ' + BEG_GREEN + myQuote[0] + END_GREEN)
+    if voice_client == None:
+        print('Quote: ' + BEG_GREEN + myQuote[0] + END_GREEN)
+        await interaction.followup.send(myQuote[0])
 
-    if not voice_client.is_playing():
+    elif not voice_client.is_playing():
+        print('Quote: ' + BEG_GREEN + myQuote[0] + END_GREEN)
         voice_client.play(discord.FFmpegPCMAudio(str('./sounds/' + myQuote[1].strip())))
         await interaction.followup.send(myQuote[0])
+
     else:
         print("Already playing audio")
         await interaction.followup.send("I'm already playing audio!")
@@ -615,6 +639,7 @@ async def winner(interaction: discord.Interaction):
     winners = []
     mostReactions = 0
     isWinner = False
+    await interaction.response.defer()
 
     async for message in channel.history(limit=None):
         isGoodLink = False
@@ -632,9 +657,6 @@ async def winner(interaction: discord.Interaction):
 
             if len(reactions) != 0:
                 for reaction in reactions:
-                    #print(reactions)
-                    #print(type(reactions[0]))
-                    #print(reactions[0].count)
                     reactionCount += reaction.count
 
                 if reactionCount > mostReactions:
@@ -666,8 +688,7 @@ async def winner(interaction: discord.Interaction):
                 winningAuthors += " & "
 
         print(f'Winning video(s): {winningTitles}')
-        #if  not ctx.channel.id == getID:
-            #await ctx.reply(f'**Winner:**\n\n{winningTitles}\n\n{winningAuthors}')
+        await interaction.followup.send("Winner announced in best-video-ofthe-week channel")
         await channel.send(f'**Winner:**\n\n{winningTitles}\n\n{winningAuthors}')
 
     else:
@@ -807,9 +828,103 @@ async def create_gemini(interaction: discord.Interaction, user_prompt: str):
 ###############################################################################################################################################
 @bot.tree.command(name="kill", description="Turn off the bot with a command")
 #@bot.command()
-async def kill(interaction: discord.Interaction,):
-    await interaction.response.send_message("Goodbye cruel world")
-    print("Attempting to shut down program")
-    quit()
+async def kill(interaction: discord.Interaction):
+    await interaction.response.defer()
+    user_name = interaction.user
+    user_id = str(interaction.user.id)
+    admin_user = os.getenv("ADMIN_USER")
+    #admin_type = type(admin_user)
+    #user_type = type(user_id)
+    #print(f"Command User: {user_name} | Command User ID: {user_id} | Type: {user_type}")
+    #print(f"Admin User ID: {admin_user} | Admin User Type: {admin_type}")
+
+    if user_id == admin_user:
+        await interaction.followup.send("Goodbye cruel world")
+        print("Attempting to shut down program")
+        quit()
+    else:
+        await interaction.followup.send("You are not authorized to use this command")
+        print(BEG_RED + f"Unauthorized user {user_name} tried to shut down the bot" + END_RED)
+##############################################################################################################################################
+@bot.tree.command(name="cookie", description="Track your cookies")
+async def cookie(interaction: discord.Interaction, cookies: str):
+    user_name = interaction.user
+    user_id = int(interaction.user.id)
+    current_date = str(datetime.datetime.now())
+    await interaction.response.defer()
+
+    try:
+        num_cookies = int(cookies)
+        connection = sqlite3.connect('cookie_info.db')
+        cursor = connection.cursor()
+        command1 = """CREATE TABLE IF NOT EXISTS cookies(id INTEGER PRIMARY KEY, user_id INTEGER, num_cookies INTEGER, date TEXT)"""
+        cursor.execute(command1)
+        query = "INSERT INTO cookies (user_id, num_cookies, date) VALUES (?, ?, ?)"
+        cursor.execute(query, (user_id, num_cookies, current_date))
+        cursor.execute("SELECT SUM(num_cookies) FROM cookies WHERE user_id = ?", (user_id,))
+        total_cookies = cursor.fetchone()[0] or 0  # if user has no entries, SUM returns None
+
+        cookies_consumed_display = []
+        cookies_consumed_display.append(f"**{user_name}** consumed {num_cookies} cookie(s). They've had {total_cookies} total this year.")
+        embed = discord.Embed(
+	    title=":cookie: :cookie: :cookie:",
+	    description="\n".join(cookies_consumed_display),
+	    color=discord.Color.gold()
+        )
+
+        await interaction.followup.send(embed=embed)
+        print(BEG_GREEN + f"{user_name} consumed {num_cookies} cookies" + END_GREEN)
+        connection.commit()
+        connection.close()
+
+    except:
+        await interaction.followup.send("Something went wrong, try again.")
+        print("An Error occurred.")
+        connection.commit()
+        connection.close()
+
+################################################################################################################################################
+@bot.tree.command(name="leaderboard", description="Who's eaten the most cookies?")
+async def leaderboard(interaction: discord.Interaction):
+    await interaction.response.defer()
+
+    try:
+        connection = sqlite3.connect('cookie_info.db')
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT user_id, SUM(num_cookies) AS total_cookies
+            FROM cookies
+            GROUP BY user_id
+            ORDER BY total_cookies DESC
+        """)
+        leaderboard = cursor.fetchall()
+        connection.close()
+
+        guild = interaction.guild
+        leaderboard_display = []
+
+        for user_id, total in leaderboard:
+            member = guild.get_member(int(user_id))
+            if member:
+                name = member.display_name
+            else:
+                name = f"User ID {user_id}"
+
+            #emoji_string = ":hotdog:" * total
+            leaderboard_display.append(f"**{name}**: {total}")
+
+        embed = discord.Embed(
+            title=":cookie: Cookie Leaderboard :cookie:",
+            description="\n".join(leaderboard_display),
+            color=discord.Color.gold()
+        )
+        await interaction.followup.send(embed=embed)
+
+    except:
+        await interaction.followup.send("Slow down, your're gonna choke. I can't handle that many at once, try splitting them up.")
+        print("Too many cookies. Message character limit reached.")
+        connection.commit()
+        connection.close()
+
 ################################################################################################################################################
 bot.run(TOKEN)

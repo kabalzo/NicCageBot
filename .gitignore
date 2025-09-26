@@ -19,3 +19,5 @@ nicbot/
 !requirements.txt
 images/
 *.db
+dog.py
+*.csv
