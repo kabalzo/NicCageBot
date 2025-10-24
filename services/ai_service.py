@@ -90,3 +90,37 @@ class GeminiService:
             print(f"Gemini API error: {str(e)}")
             print(f"Error type: {type(e).__name__}")
             raise
+
+    # === ADD THIS METHOD ===
+    async def create_images(self, prompt):
+        try:
+            print(f"Gemini processing image prompt: {prompt}")
+            directory = "images"
+            names = ["one", "two", "three", "four"]
+            images = []
+            
+            os.makedirs(directory, exist_ok=True)
+            
+            response = self.client.models.generate_images(
+                model=self.image_model,
+                prompt=prompt,
+                config=types.GenerateImagesConfig(number_of_images=4)
+            )
+            
+            print(f"Gemini generated {len(response.generated_images)} images")
+            
+            for name, generated_image in zip(names, response.generated_images):
+                file_path = f"{directory}/output_image_{name}.png"
+                image = Image.open(BytesIO(generated_image.image.image_bytes))
+                image.save(file_path)
+                
+                with open(file_path, 'rb') as fp:
+                    image_bytes = fp.read()
+                    image_io = BytesIO(image_bytes)
+                    images.append(discord.File(image_io, filename=os.path.basename(file_path)))
+            
+            return images
+            
+        except Exception as e:
+            print(f"Gemini image creation error: {e}")
+            raise

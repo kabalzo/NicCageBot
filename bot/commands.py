@@ -39,7 +39,7 @@ class BotCommands(commands.Cog):
     async def speak(self, interaction: discord.Interaction):
         await interaction.response.defer()
         
-        voice_client = interaction.guild.voice_client
+        voice_client = interaction.guild.voice_client if interaction.guild else None
         my_random_int = self.quote_manager.get_random_quote_index(self.last_int)
         self.last_int = my_random_int
         
@@ -63,11 +63,11 @@ class BotCommands(commands.Cog):
     @app_commands.command(name="face", description="Sends the face Nic Cage quote")
     async def face(self, interaction: discord.Interaction):
         await self._play_specific_quote(interaction, 20)
-    
+########################################################################################################################################################   
     async def _play_specific_quote(self, interaction: discord.Interaction, quote_index: int):
         await interaction.response.defer()
         
-        voice_client = interaction.guild.voice_client
+        voice_client = interaction.guild.voice_client if interaction.guild else None
         quote, sound_file = self.quote_manager.get_quote(quote_index)
         
         if voice_client and voice_client.is_connected():
@@ -318,6 +318,11 @@ class BotCommands(commands.Cog):
     async def leaderboard(self, interaction: discord.Interaction):
         try:
             await interaction.response.send_message("Fetching cookie leaderboard...", ephemeral=False)
+            
+            # Handle DMs - leaderboard requires a guild context
+            if interaction.guild is None:
+                await interaction.edit_original_response(content="The cookie leaderboard is only available in server channels since it shows server members.")
+                return
             
             leaderboard_data = self.cookie_db.get_leaderboard(interaction.guild)
             
