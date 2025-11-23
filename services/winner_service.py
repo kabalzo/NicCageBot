@@ -16,6 +16,7 @@ class WinnerService:
         """Start the winner calculation service"""
         self.is_running = True
         
+        '''
         # Ensure YouTube is authenticated if playlist integration is enabled
         if (self.config.get('winner.add_to_playlist', False) and 
             hasattr(self.bot, 'youtube_service') and 
@@ -34,7 +35,8 @@ class WinnerService:
                 print("YouTube is already authenticated for playlist integration")
         else:
             print("Playlist integration not enabled or YouTube service not available")
-        
+            '''
+
         # Start the background task
         asyncio.create_task(self.calculate_time_to_winner())
         print("Winner service started successfully")
@@ -190,6 +192,17 @@ class WinnerService:
         if not hasattr(self.bot, 'youtube_service'):
             print("YouTube service not available for playlist addition")
             return
+        
+        # Authenticate right before adding to playlist
+        if not self.bot.youtube_service.is_authenticated():
+            print("YouTube not authenticated, authenticating now...")
+            try:
+                await self.bot.youtube_service.authenticate_oauth_headless()
+                print("YouTube authentication successful")
+            except Exception as e:
+                print(f"YouTube authentication failed: {e}")
+                print("Skipping playlist addition...")
+                return
             
         winner_ids = []
         for winner in winners:
