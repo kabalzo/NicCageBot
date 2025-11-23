@@ -4,6 +4,7 @@ from discord.ext import commands
 from config.config import Config
 from services.youtube_service import YouTubeService
 from services.winner_service import WinnerService
+from services.poll_service import PollService
 
 class NicCageBot(commands.Bot):
     def __init__(self, config: Config):
@@ -18,6 +19,7 @@ class NicCageBot(commands.Bot):
         
         self.youtube_service = None
         self.winner_service = None
+        self.poll_service = None
         
     async def setup_hook(self):
         # Load extensions
@@ -45,6 +47,13 @@ class NicCageBot(commands.Bot):
             print("Winner service initialized")
         except Exception as e:
             print(f"Winner service initialization failed: {e}")
+
+        # Initialize Poll service
+        try:
+            self.poll_service = PollService(self)
+            print("Poll service initialized")
+        except Exception as e:
+            print(f"Poll service initialization failed: {e}")
         
     def get_monitor_channel(self):
         """Get the channel to monitor for links"""
@@ -55,6 +64,23 @@ class NicCageBot(commands.Bot):
         """Get the channel to send notifications to"""
         channel_id = self.config.channels['send']
         return self.get_channel(channel_id)
+
+    def get_poll_channel(self):
+        """Get the channel to poll"""
+        channel_id = self.config.channels['poll']
+        return self.get_channel(channel_id)
+
+    def get_movieboys_role_id(self):
+        """Get the discord role to notify"""
+        mode = self.config.mode
+        role_id = self.config.get(f'movie_poll.{mode}.movie_boys_role')
+        return role_id
+
+    def get_poll_window(self):
+        """Get the window that the poll stays open"""
+        mode = self.config.mode
+        window = self.config.get(f'movie_poll.window')
+        return window
     
     async def on_ready(self):
         """Custom on_ready event handler"""

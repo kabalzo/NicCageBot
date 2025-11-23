@@ -48,17 +48,27 @@ class WinnerService:
         while self.is_running:
             try:
                 now = datetime.datetime.now()
+            
+                # Parse schedule from config (e.g., "monday-14:00")
+                schedule = self.config.get('winner.schedule', 'monday-14:00')
+                day_name, time_str = schedule.lower().split('-')
+                hour, minute = map(int, time_str.split(':'))
+            
+                # Map day names to weekday numbers (0=Monday, 6=Sunday)
+                day_map = {'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3, 
+                       'friday': 4, 'saturday': 5, 'sunday': 6}
+                target_weekday = day_map[day_name]
+            
+                # Calculate days until target day
+                days_ahead = (target_weekday - now.weekday()) % 7
+                if days_ahead == 0 and (now.hour > hour or (now.hour == hour and now.minute >= minute)):
+                    days_ahead = 7  # Already passed today, schedule for next week
+            
+                next_announcement = now.replace(hour=hour, minute=minute, second=0, microsecond=0) + datetime.timedelta(days=days_ahead)
                 
-                # Calculate next Monday 2:00 PM UTC (14:00)
-                days_ahead = 0 if now.weekday() == 0 and now.hour < 14 else (7 - now.weekday()) % 7
-                if days_ahead == 0 and now.hour >= 14:
-                    days_ahead = 7  # Next Monday if it's already past 2PM on Monday
+                wait_seconds = (next_announcement - now).total_seconds()
                 
-                next_monday = now.replace(hour=14, minute=0, second=0, microsecond=0) + datetime.timedelta(days=days_ahead)
-                
-                wait_seconds = (next_monday - now).total_seconds()
-                
-                print(f"Next winner calculation scheduled for: {next_monday}")
+                print(f"Next winner calculation scheduled for: {next_announcement}")
                 print(f"Waiting {wait_seconds/3600:.2f} hours until next winner announcement")
                 
                 # Wait until next Monday 2PM

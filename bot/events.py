@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands, tasks
 from data.file_handlers import QuoteManager, LinkPatterns
 from services.winner_service import WinnerService
+from services.poll_service import PollService
 from data.database import LinkDatabase
 from bot.utils import soft_scan_channel, check_deleted_messages_fast, check_link_realtime
 import asyncio
@@ -11,6 +12,7 @@ class BotEvents(commands.Cog):
         self.bot = bot
         self.quote_manager = QuoteManager("data/quotes.txt")
         self.winner_service = WinnerService(bot)
+        self.poll_service = PollService(bot)
         self.link_db = LinkDatabase(mode=bot.config.mode)
         self.message_cache = set()  # Cache of recent message IDs
         self.initial_scan_complete = False
@@ -48,6 +50,13 @@ class BotEvents(commands.Cog):
                 print("Winner service started automatically")
             except Exception as e:
                 print(f"Failed to start winner service: {e}")
+        # Start poll message service if enabled in config
+        if self.bot.config.get('bot.auto_poll', False):
+            try:
+                await self.bot.poll_service.start()
+                print("Poll service started automatically")
+            except Exception as e:
+                print(f"Failed to start poll service: {e}")
     
     async def _build_message_cache(self):
         """Build a cache of recent message IDs for faster deletion checks"""

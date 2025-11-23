@@ -294,11 +294,15 @@ class BotCommands(commands.Cog):
             elif num_cookies <= 3:
                 message = f"**{interaction.user}** enjoyed {num_cookies} cookies. A nice snack! Total: {total_cookies}"
             elif num_cookies <= 6:
-                message = f"**{interaction.user}** devoured {num_cookies} cookies. Someone's hungry! Total: {total_cookies}"
+                message = f"**{interaction.user}** gobbled {num_cookies} cookies. Someone's hungry! Total: {total_cookies}"
             elif num_cookies <= 10:
                 message = f"**{interaction.user}** demolished {num_cookies} cookies. Cookie monster alert! Total: {total_cookies}"
-            else:
+            elif num_cookies <= 20:
+                message = f"**{interaction.user}** crushed {num_cookies} cookies. Cookie :ocean: tsunami :ocean: Total: {total_cookies}"
+            elif num_cookies <= 50:
                 message = f"**{interaction.user}** consumed {num_cookies} cookies! 🚨 COOKIE EMERGENCY 🚨 Total: {total_cookies}"
+            else:
+                message = f"**{interaction.user}** gorged on {num_cookies} cookies...save some for the rest of us...Total: {total_cookies}"
             
             embed = discord.Embed(
                 title=":cookie: Cookie Counter :cookie:",
@@ -402,6 +406,18 @@ class BotCommands(commands.Cog):
             await interaction.edit_original_response(content="Couldn't fetch your cookie stats. Try again later.")
 
 ########################################################################################################################################################
+    @app_commands.command(name="test_poll", description="Test poll integration")
+    async def test_poll(self, interaction: discord.Interaction):
+        try:
+            await interaction.response.send_message("Trying to make the poll...", ephemeral=True)
+            await self.bot.poll_service._send_poll()
+            await interaction.edit_original_response(content="✅ Poll sent successfully!")
+            print("Poll sent successfully")
+        except Exception as e:
+            await interaction.edit_original_response(content=f"❌ Failed to make the poll: {e}")
+            print(f"Failed to send poll: {e}")
+
+########################################################################################################################################################
     @app_commands.command(name="test_youtube", description="Test YouTube playlist integration")
     async def test_youtube(self, interaction: discord.Interaction, video_url: str):
         """Test if YouTube playlist integration is working"""
@@ -429,18 +445,17 @@ class BotCommands(commands.Cog):
             await interaction.edit_original_response(content=f"❌ Failed to add video: {str(e)}")
 
 ########################################################################################################################################################
-    @app_commands.command(name="kill", description="Turn off the bot with a command")
-    async def kill(self, interaction: discord.Interaction):
-        await interaction.response.defer()
-        if str(interaction.user.id) == self.bot.config.admin_user_id:
-            await interaction.followup.send("Goodbye cruel world! 😢")
-            print("Attempting to shut down program")
-            # Use a task to avoid blocking
-            asyncio.create_task(self._shutdown_bot())
-        else:
-            await interaction.followup.send("You are not authorized to use this command! 🚫")
-            print(f"Unauthorized user {interaction.user} tried to shut down the bot")
+    @app_commands.command(name="force_sync", description="Force sync commands (admin only)")
+    async def force_sync(self, interaction: discord.Interaction):
+        if str(interaction.user.id) != self.bot.config.admin_user_id:
+            await interaction.response.send_message("❌ Admin only!", ephemeral=True)
+            return
     
+        await interaction.response.defer(ephemeral=True)
+        synced = await self.bot.tree.sync()
+        await interaction.followup.send(f"✅ Synced {len(synced)} commands!")
+
+########################################################################################################################################################
     async def _shutdown_bot(self):
         """Helper method to shutdown the bot gracefully"""
         await asyncio.sleep(2)  # Give time for the response to send
