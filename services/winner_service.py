@@ -15,27 +15,6 @@ class WinnerService:
     async def start(self):
         """Start the winner calculation service"""
         self.is_running = True
-        
-        '''
-        # Ensure YouTube is authenticated if playlist integration is enabled
-        if (self.config.get('winner.add_to_playlist', False) and 
-            hasattr(self.bot, 'youtube_service') and 
-            self.bot.youtube_service):
-            
-            print("Checking YouTube authentication for playlist integration...")
-            if not self.bot.youtube_service.is_authenticated():
-                print("YouTube authentication required for playlist integration")
-                try:
-                    await self.bot.youtube_service.authenticate_oauth_headless()
-                    print("YouTube authentication successful")
-                except Exception as e:
-                    print(f"YouTube authentication failed: {e}")
-                    print("Continuing without playlist integration...")
-            else:
-                print("YouTube is already authenticated for playlist integration")
-        else:
-            print("Playlist integration not enabled or YouTube service not available")
-            '''
 
         # Start the background task
         asyncio.create_task(self.calculate_time_to_winner())
@@ -89,23 +68,35 @@ class WinnerService:
         
         winners = await self.calculate_winners()
         
-        # Add winners to playlist if YouTube service is available and configured
-        if (winners and 
+        # Check if playlist addition is enabled and possible
+        should_add_to_playlist = (
+            winners and 
             self.config.get('winner.add_to_playlist', False) and 
             hasattr(self.bot, 'youtube_service') and 
-            self.bot.youtube_service and 
-            self.bot.youtube_service.is_authenticated()):
-            
-            print(f"Attempting to add {len(winners)} winner(s) to YouTube playlist...")
-            await self._add_winners_to_playlist(winners)
-        else:
-            if winners:
-                print(f"Found {len(winners)} winner(s) but playlist integration is not enabled or YouTube is not authenticated")
-            else:
-                print("No winners found to add to playlist")
+            self.bot.youtube_service
+        )
         
-        # Send announcement
+        if should_add_to_playlist:
+            # Check authentication status WITHOUT triggering new auth
+            if self.bot.youtube_service.is_authenticated():
+                print(f"Attempting to add {len(winners)} winner(s) to YouTube playlist...")
+                try:
+                    await self._add_winners_to_playlist(winners)
+                except Exception as e:
+                    print(f"❌ Failed to add winners to playlist: {e}")
+                    print("Continuing with winner announcement anyway...")
+            else:
+                print("⚠️  YouTube OAuth not authenticated - skipping playlist addition")
+                print("To enable playlist integration:")
+                print("1. Run the manual OAuth flow on a machine with a browser")
+                print("2. Copy the token.pickle file to this server")
+                print("3. Restart the bot or use /test_youtube to verify")
+        elif winners:
+            print(f"Found {len(winners)} winner(s) but playlist integration is not enabled")
+        
+        # ALWAYS send announcement regardless of playlist status
         await self._send_winner_announcement(winners)
+        print("Winner announcement completed")
     
     async def calculate_winners(self, ctx=None):
         """Calculate the winners based on reaction counts"""
@@ -193,16 +184,10 @@ class WinnerService:
             print("YouTube service not available for playlist addition")
             return
         
-        # Authenticate right before adding to playlist
+        # DON'T authenticate here - just check if already authenticated
         if not self.bot.youtube_service.is_authenticated():
-            print("YouTube not authenticated, authenticating now...")
-            try:
-                await self.bot.youtube_service.authenticate_oauth_headless()
-                print("YouTube authentication successful")
-            except Exception as e:
-                print(f"YouTube authentication failed: {e}")
-                print("Skipping playlist addition...")
-                return
+            print("YouTube not authenticated - cannot add to playlist")
+            return
             
         winner_ids = []
         for winner in winners:
@@ -218,11 +203,14 @@ class WinnerService:
                 print(f'Trying to add {video_id} to playlist...')
                 self.bot.youtube_service.add_video_to_playlist(video_id)
                 successful_adds += 1
-                print(f'Successfully added {video_id} to playlist')
+                print(f'✅ Successfully added {video_id} to playlist')
             except Exception as e:
-                print(f'Failed to add video {video_id} to playlist: {e}')
+                print(f'❌ Failed to add video {video_id} to playlist: {e}')
         
-        print(f"Successfully added {successful_adds}/{len(winner_ids)} videos to playlist")
+        if successful_adds > 0:
+            print(f"Successfully added {successful_adds}/{len(winner_ids)} videos to playlist")
+        else:
+            print(f"Failed to add any videos to playlist")
     
     async def _send_winner_announcement(self, winners):
         """Send winner announcement to Discord"""

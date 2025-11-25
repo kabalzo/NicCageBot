@@ -193,7 +193,7 @@ class BotCommands(commands.Cog):
                     pass
     
 ########################################################################################################################################################
-    @app_commands.command(name="ask_openai", description="Responds to a prompt using OpenAI (ChatGPT)")
+    @app_commands.command(name="ask_openai", description="[BROKEN - API limits] Responds to a prompt using OpenAI (ChatGPT)")
     async def ask_openai(self, interaction: discord.Interaction, question: str):
         await interaction.response.defer()
         try:
@@ -210,7 +210,7 @@ class BotCommands(commands.Cog):
             await interaction.followup.send("I can't answer that right now. Try again later.")
     
 ########################################################################################################################################################
-    @app_commands.command(name="create_openai", description="Creates images from a prompt using OpenAI (ChatGPT)")
+    @app_commands.command(name="create_openai", description="[BROKEN - API limits] Creates images from a prompt using OpenAI (ChatGPT)")
     async def create_openai(self, interaction: discord.Interaction, user_prompt: str):
         await interaction.response.defer()
         try:
@@ -262,7 +262,7 @@ class BotCommands(commands.Cog):
                 print(f"Could not send error message to Discord: {followup_error}")    
     
 ########################################################################################################################################################
-    @app_commands.command(name="create_gemini", description="Creates images from a prompt using Google Gemini")
+    @app_commands.command(name="create_gemini", description="[BROKEN - API limits] Creates images from a prompt using Google Gemini")
     async def create_gemini(self, interaction: discord.Interaction, user_prompt: str):
         await interaction.response.defer()
         try:
