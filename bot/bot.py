@@ -1,10 +1,13 @@
 import discord
 import os
+import logging
 from discord.ext import commands
 from config.config import Config
 from services.youtube_service import YouTubeService
 from services.winner_service import WinnerService
 from services.poll_service import PollService
+
+logger = logging.getLogger(__name__)
 
 class NicCageBot(commands.Bot):
     def __init__(self, config: Config):
@@ -29,31 +32,31 @@ class NicCageBot(commands.Bot):
         # Sync commands globally
         try:
             synced = await self.tree.sync()
-            print(f"Synced {len(synced)} command(s)")
+            logger.info(f"Synced {len(synced)} command(s)")
         except Exception as e:
-            print(f"Failed to sync commands: {e}")
+            logger.error(f"Failed to sync commands: {e}")
         
         # Initialize YouTube service
         try:
             self.youtube_service = YouTubeService(self.config)
             self.youtube_service.initialize_api_key()
-            print("YouTube service initialized with API key")
+            logger.info("YouTube service initialized with API key")
         except Exception as e:
-            print(f"YouTube service initialization failed: {e}")
+            logger.error(f"YouTube service initialization failed: {e}")
         
         # Initialize Winner service
         try:
             self.winner_service = WinnerService(self)
-            print("Winner service initialized")
+            logger.info("Winner service initialized")
         except Exception as e:
-            print(f"Winner service initialization failed: {e}")
+            logger.error(f"Winner service initialization failed: {e}")
 
         # Initialize Poll service
         try:
             self.poll_service = PollService(self)
-            print("Poll service initialized")
+            logger.info("Poll service initialized")
         except Exception as e:
-            print(f"Poll service initialization failed: {e}")
+            logger.error(f"Poll service initialization failed: {e}")
         
     def get_monitor_channel(self):
         """Get the channel to monitor for links"""
@@ -84,11 +87,11 @@ class NicCageBot(commands.Bot):
     
     async def on_ready(self):
         """Custom on_ready event handler"""
-        print(f'{self.user} has connected to Discord!')
-        print(f'Bot is running in {self.config.mode} mode')
-        print(f'Monitoring channel: {self.config.channels["monitor"]}')
-        print(f'Sending to channel: {self.config.channels["send"]}')
-        print(f'Playlist ID: {self.config.playlist_id}')
+        logger.info(f'{self.user} has connected to Discord!')
+        logger.info(f'Bot is running in {self.config.mode} mode')
+        logger.info(f'Monitoring channel: {self.config.channels["monitor"]}')
+        logger.info(f'Sending to channel: {self.config.channels["send"]}')
+        logger.info(f'Playlist ID: {self.config.playlist_id}')
 
 def create_bot(mode_override=None):
     """Factory function to create and configure the bot"""

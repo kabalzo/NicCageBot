@@ -1,11 +1,14 @@
 import os
 import pickle
 import asyncio
+import logging
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import requests
 from bs4 import BeautifulSoup
+
+logger = logging.getLogger(__name__)
 
 class YouTubeService:
     def __init__(self, config):
@@ -18,42 +21,42 @@ class YouTubeService:
     def _load_and_refresh_credentials(self):
         """Load credentials from token.pickle and refresh if needed"""
         if not os.path.exists('token.pickle'):
-            print("token.pickle not found - OAuth not available")
+            logger.warning("token.pickle not found - OAuth not available")
             return None
-        
+
         try:
             with open('token.pickle', 'rb') as token:
                 creds = pickle.load(token)
-                print(f"Loaded credentials from token.pickle (valid: {creds.valid}, expired: {creds.expired})")
-            
+                logger.info(f"Loaded credentials from token.pickle (valid: {creds.valid}, expired: {creds.expired})")
+
             # Refresh if expired
             if not creds.valid:
                 if creds.expired and creds.refresh_token:
-                    print("Token expired, refreshing...")
+                    logger.info("Token expired, refreshing...")
                     creds.refresh(Request())
-                    print("✅ Token refreshed successfully")
-                    
+                    logger.info("✅ Token refreshed successfully")
+
                     # Save refreshed credentials
                     with open('token.pickle', 'wb') as token:
                         pickle.dump(creds, token)
-                    print("Saved refreshed token to token.pickle")
+                    logger.info("Saved refreshed token to token.pickle")
                 else:
-                    print("Token invalid and cannot be refreshed")
+                    logger.error("Token invalid and cannot be refreshed")
                     return None
-            
+
             return creds
-            
+
         except Exception as e:
-            print(f"Error loading/refreshing credentials: {e}")
+            logger.error(f"Error loading/refreshing credentials: {e}")
             return None
     
     def is_authenticated(self):
         """Check if YouTube OAuth is authenticated, load and refresh if needed"""
         # Try to load credentials if we don't have them yet
         if not self.credentials:
-            print("No credentials loaded yet, attempting to load from token.pickle...")
+            logger.info("No credentials loaded yet, attempting to load from token.pickle...")
             self.credentials = self._load_and_refresh_credentials()
-            
+
             if self.credentials:
                 # Build YouTube service with loaded credentials
                 self.youtube_oauth = build(
@@ -61,14 +64,14 @@ class YouTubeService:
                     self.config.get('youtube.version'),
                     credentials=self.credentials
                 )
-                print("✅ YouTube OAuth service initialized")
-        
+                logger.info("✅ YouTube OAuth service initialized")
+
         # If we have credentials, check if they're still valid
         if self.credentials:
             if not self.credentials.valid:
-                print("Credentials invalid, attempting refresh...")
+                logger.info("Credentials invalid, attempting refresh...")
                 self.credentials = self._load_and_refresh_credentials()
-                
+
                 if self.credentials:
                     # Rebuild service with refreshed credentials
                     self.youtube_oauth = build(
@@ -76,16 +79,16 @@ class YouTubeService:
                         self.config.get('youtube.version'),
                         credentials=self.credentials
                     )
-                    print("✅ YouTube OAuth service rebuilt with refreshed token")
+                    logger.info("✅ YouTube OAuth service rebuilt with refreshed token")
                     return True
                 else:
-                    print("❌ Failed to refresh credentials")
+                    logger.error("❌ Failed to refresh credentials")
                     return False
-            
-            print("YouTube authentication: ✅ Valid")
+
+            logger.info("YouTube authentication: ✅ Valid")
             return True
-        
-        print("YouTube authentication: ❌ Not authenticated")
+
+        logger.warning("YouTube authentication: ❌ Not authenticated")
         return False
     
     def initialize_api_key(self):
@@ -96,7 +99,7 @@ class YouTubeService:
                 self.config.get('youtube.version'),
                 developerKey=self.api_key
             )
-            print("YouTube API key authentication initialized")
+            logger.info("YouTube API key authentication initialized")
         return self.youtube_api
     
     def add_video_to_playlist(self, video_id, playlist_id=None):
@@ -109,7 +112,7 @@ class YouTubeService:
             raise Exception("YouTube OAuth not authenticated")
         
         try:
-            print(f"Adding video {video_id} to playlist {playlist_id}...")
+            logger.info(f"Adding video {video_id} to playlist {playlist_id}...")
             request = self.youtube_oauth.playlistItems().insert(
                 part="snippet",
                 body={
@@ -122,13 +125,13 @@ class YouTubeService:
                     }
                 }
             )
-            
+
             response = request.execute()
-            print(f"✅ Video {video_id} added to playlist")
+            logger.info(f"✅ Video {video_id} added to playlist")
             return response
-            
+
         except Exception as e:
-            print(f"❌ Failed to add video {video_id}: {e}")
+            logger.error(f"❌ Failed to add video {video_id}: {e}")
             raise
     
     def get_video_title(self, video_id):
@@ -147,9 +150,9 @@ class YouTubeService:
                 
                 if response['items']:
                     return response['items'][0]['snippet']['title']
-                    
+
             except Exception as e:
-                print(f"Failed to get video title via API for {video_id}: {e}")
+                logger.warning(f"Failed to get video title via API for {video_id}: {e}")
         
         # Fallback to web scraping
         return self._get_video_title_fallback(video_id)
@@ -165,6 +168,6 @@ class YouTubeService:
                 title = title_tag.text.split(" - YouTube")[0]
                 return title
         except Exception as e:
-            print(f"Error getting video title via fallback: {e}")
-            
+            logger.error(f"Error getting video title via fallback: {e}")
+
         return "Unknown Title"
