@@ -1,7 +1,10 @@
 import sqlite3
 import datetime
 import os
+import logging
 from datetime import timezone
+
+logger = logging.getLogger(__name__)
 
 class CookieDatabase:
     def __init__(self, db_path=None, mode="prod"):
@@ -124,7 +127,7 @@ class LinkDatabase:
             conn.commit()
             return True
         except Exception as e:
-            print(f"Database error in add_or_update_link: {e}")
+            logger.error(f"Database error in add_or_update_link: {e}")
             return False
         finally:
             conn.close()

@@ -5,9 +5,12 @@ import random
 import time
 import os
 import asyncio
+import logging
 from data.file_handlers import QuoteManager, LinkPatterns
 from services.ai_service import OpenAIService, GeminiService
 from data.database import CookieDatabase
+
+logger = logging.getLogger(__name__)
 
 class BotCommands(commands.Cog):
     def __init__(self, bot):
@@ -163,12 +166,12 @@ class BotCommands(commands.Cog):
                 
                 if winners:
                     # Add to playlist if YouTube service is available and authenticated
-                    if (self.bot.config.get('winner.add_to_playlist', False) and 
-                        hasattr(self.bot, 'youtube_service') and 
-                        self.bot.youtube_service and 
+                    if (self.bot.config.get('winner.add_to_playlist', False) and
+                        hasattr(self.bot, 'youtube_service') and
+                        self.bot.youtube_service and
                         self.bot.youtube_service.is_authenticated()):
-                        
-                        print(f"Manual winner: Attempting to add {len(winners)} winner(s) to YouTube playlist...")
+
+                        logger.info(f"Manual winner: Attempting to add {len(winners)} winner(s) to YouTube playlist...")
                         await self.bot.winner_service._add_winners_to_playlist(winners)
                     
                     # Send announcement
@@ -182,7 +185,7 @@ class BotCommands(commands.Cog):
                 await interaction.edit_original_response(content="❌ Winner service is not available")
                 
         except Exception as e:
-            print(f"Error in winner command: {e}")
+            logger.error(f"Error in winner command: {e}")
             try:
                 await interaction.edit_original_response(content="❌ Error calculating winner")
             except:
@@ -206,7 +209,7 @@ class BotCommands(commands.Cog):
             else:
                 await interaction.followup.send(response)
         except Exception as e:
-            print(f"OpenAI error: {e}")
+            logger.error(f"OpenAI error: {e}")
             await interaction.followup.send("I can't answer that right now. Try again later.")
     
 ########################################################################################################################################################
@@ -217,49 +220,46 @@ class BotCommands(commands.Cog):
             image_url = await self.openai_service.create_image(user_prompt)
             await interaction.followup.send(image_url)
         except Exception as e:
-            print(f"OpenAI image creation error: {e}")
+            logger.error(f"OpenAI image creation error: {e}")
             await interaction.followup.send("I can't create that image right now. Try again later.")
 
 ########################################################################################################################################################
     @app_commands.command(name="ask_gemini", description="Responds to a prompt using Google Gemini")
     async def ask_gemini(self, interaction: discord.Interaction, prompt: str):
-        print(f"/ask_gemini command triggered by {interaction.user}")
-        print(f"Prompt: {prompt}")
-        
+        logger.info(f"/ask_gemini command triggered by {interaction.user}")
+        logger.info(f"Prompt: {prompt}")
+
         await interaction.response.defer()
-        
+
         try:
-            print("Processing with Gemini service...")
+            logger.info("Processing with Gemini service...")
             response = await self.gemini_service.ask_question(prompt)
-            
-            print(f"Preparing to send response ({len(response)} characters)")
-            
+
+            logger.info(f"Preparing to send response ({len(response)} characters)")
+
             # Split long responses to avoid Discord character limit
             if len(response) > 2000:
-                print("✂️esponse too long, splitting into chunks...")
+                logger.info("Response too long, splitting into chunks...")
                 chunks = [response[i:i+2000] for i in range(0, len(response), 2000)]
-                print(f"Split into {len(chunks)} chunks")
-                
+                logger.info(f"Split into {len(chunks)} chunks")
+
                 for i, chunk in enumerate(chunks):
                     await interaction.followup.send(chunk)
-                    print(f"Sent chunk {i+1}/{len(chunks)}")
+                    logger.info(f"Sent chunk {i+1}/{len(chunks)}")
             else:
                 await interaction.followup.send(response)
-                print("✅ Response sent successfully")
-                
-            print("/ask_gemini command completed successfully")
-                
+                logger.info("✅ Response sent successfully")
+
+            logger.info("/ask_gemini command completed successfully")
+
         except Exception as e:
-            print(f"Error in /ask_gemini: {str(e)}")
-            print(f"Error type: {type(e).__name__}")
-            import traceback
-            traceback.print_exc()  # This will print the full stack trace
-            
+            logger.exception(f"Error in /ask_gemini: {str(e)}")
+
             try:
                 await interaction.followup.send("I couldn't process your request with Gemini. Please try again later.")
-                print("Sent error message to user")
+                logger.info("Sent error message to user")
             except Exception as followup_error:
-                print(f"Could not send error message to Discord: {followup_error}")    
+                logger.error(f"Could not send error message to Discord: {followup_error}")    
     
 ########################################################################################################################################################
     @app_commands.command(name="create_gemini", description="[BROKEN - API limits] Creates images from a prompt using Google Gemini")
@@ -269,7 +269,7 @@ class BotCommands(commands.Cog):
             images = await self.gemini_service.create_images(user_prompt)
             await interaction.followup.send(files=images)
         except Exception as e:
-            print(f"Gemini image creation error: {e}")
+            logger.error(f"Gemini image creation error: {e}")
             await interaction.followup.send("I can't create those images right now. Try again later.")
     
 ########################################################################################################################################################
@@ -314,7 +314,7 @@ class BotCommands(commands.Cog):
         except ValueError:
             await interaction.edit_original_response(content="Please enter a valid number of cookies.")
         except Exception as e:
-            print(f"Cookie tracking error: {e}")
+            logger.error(f"Cookie tracking error: {e}")
             await interaction.edit_original_response(content="Something went wrong with cookie tracking. Try again.")
     
 ########################################################################################################################################################
@@ -363,9 +363,9 @@ class BotCommands(commands.Cog):
             )
             embed.set_footer(text="Keep eating those cookies!")
             await interaction.edit_original_response(content=None, embed=embed)
-            
+
         except Exception as e:
-            print(f"Leaderboard error: {e}")
+            logger.error(f"Leaderboard error: {e}")
             await interaction.edit_original_response(content="Couldn't fetch the leaderboard right now. Try again later.")
 
 ########################################################################################################################################################
@@ -400,9 +400,9 @@ class BotCommands(commands.Cog):
                 color=discord.Color.gold()
             )
             await interaction.edit_original_response(content=None, embed=embed)
-            
+
         except Exception as e:
-            print(f"MyCookies error: {e}")
+            logger.error(f"MyCookies error: {e}")
             await interaction.edit_original_response(content="Couldn't fetch your cookie stats. Try again later.")
 
 ########################################################################################################################################################
@@ -412,10 +412,10 @@ class BotCommands(commands.Cog):
             await interaction.response.send_message("Trying to make the poll...", ephemeral=True)
             await self.bot.poll_service._send_poll()
             await interaction.edit_original_response(content="✅ Poll sent successfully!")
-            print("Poll sent successfully")
+            logger.info("Poll sent successfully")
         except Exception as e:
             await interaction.edit_original_response(content=f"❌ Failed to make the poll: {e}")
-            print(f"Failed to send poll: {e}")
+            logger.error(f"Failed to send poll: {e}")
 
 ########################################################################################################################################################
     @app_commands.command(name="test_youtube", description="Test YouTube playlist integration")

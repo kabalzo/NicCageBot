@@ -1,8 +1,11 @@
 import os
 import yaml
+import logging
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 class Config:
     def __init__(self, config_path="config/config.yaml", mode_override=None):
@@ -18,7 +21,7 @@ class Config:
         # Override mode from command line if provided
         if mode_override:
             self.data['bot']['mode'] = mode_override
-            print(f"Mode overridden to: {mode_override}")
+            logger.info(f"Mode overridden to: {mode_override}")
     
     def _replace_env_vars(self, obj):
         if isinstance(obj, dict):

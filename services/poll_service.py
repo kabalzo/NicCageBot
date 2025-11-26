@@ -2,6 +2,9 @@ import discord
 import asyncio
 import datetime
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 class PollService:
     def __init__(self, bot):
@@ -12,10 +15,10 @@ class PollService:
     async def start(self):
         """Start the movie poll service"""
         self.is_running = True
-        
+
         # Start the background task
         asyncio.create_task(self.calculate_time_to_poll())
-        print("Poll service started successfully")
+        logger.info("Poll service started successfully")
         
     async def stop(self):
         """Stop the movie poll service"""
@@ -43,19 +46,19 @@ class PollService:
                     days_ahead = 7  # Already passed today, schedule for next week
             
                 next_announcement = now.replace(hour=hour, minute=minute, second=0, microsecond=0) + datetime.timedelta(days=days_ahead)
-                
+
                 wait_seconds = (next_announcement - now).total_seconds()
-                
-                print(f"Next movie  poll scheduled for: {next_announcement}")
-                print(f"Waiting {wait_seconds/3600:.2f} hours until next poll announcement")
-                
+
+                logger.info(f"Next movie  poll scheduled for: {next_announcement}")
+                logger.info(f"Waiting {wait_seconds/3600:.2f} hours until next poll announcement")
+
                 # Wait until next Monday 2PM
                 await asyncio.sleep(wait_seconds)
 
                 await self._send_poll()
-                
+
             except Exception as e:
-                print(f"Error in schedule service: {e}")
+                logger.error(f"Error in schedule service: {e}")
                 await asyncio.sleep(3600)  # Wait 1 hour before retrying
  
     async def _send_poll(self):
@@ -64,27 +67,23 @@ class PollService:
         role_id = self.bot.get_movieboys_role_id()
         poll_window = self.bot.get_poll_window()
 
-        #print(f"DEBUG: Poll Window = {poll_window}")  # Add this line
-        #print(f"DEBUG: Role ID = {role_id}")  # Add this line
-        #print(f"DEBUG: Bot mode = {self.bot.config.mode}")  # Add this too
-    
         # Create a Poll object
         poll = discord.Poll(
             question="***Pick your days***?",
             duration=datetime.timedelta(hours=poll_window),  # Poll stays open for 24 hours
             multiple=True  # Allow multiple selections
         )
-    
+
         # Add poll options
         poll.add_answer(text="Thursday", emoji="🍿")
         poll.add_answer(text="Friday", emoji="🍿")
         poll.add_answer(text="Saturday", emoji="🍿")
         poll.add_answer(text="Sunday", emoji="🍿")
-    
+
         # Send the message with the poll
         await send_channel.send(
             content=f"<@&{role_id}> **It's Movie Time!**",
             poll=poll
         )
-    
-        print(f'Movie poll sent')
+
+        logger.info(f'Movie poll sent')
