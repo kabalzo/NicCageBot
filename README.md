@@ -1,9 +1,3 @@
-<div style="display: flex; gap: 10px; align-items: center;">
-  <img src="https://github.com/user-attachments/assets/7d64bff8-f3e9-4c04-b724-4708b6c2a9d1" width="400" height="120" alt="image" />
-  <img src="https://github.com/user-attachments/assets/3e9f4894-1136-4271-aa17-283a07b364d0" width="281" height="215" alt="image" />
-  <img src="https://github.com/user-attachments/assets/cd20327c-b770-42b6-adf7-b8bc131a3da4" width="318" height="215" alt="image" />
-</div>
-
 # 🎬 NicCageBot
 
 A feature-rich Discord bot that combines Nicolas Cage movie quotes, AI interactions, YouTube video tracking, and automated movie night polling.
