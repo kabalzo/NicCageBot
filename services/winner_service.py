@@ -4,6 +4,7 @@ import time
 import re
 import logging
 import requests
+import random
 from bs4 import BeautifulSoup
 from data.file_handlers import LinkPatterns
 
@@ -143,8 +144,15 @@ class WinnerService:
         log_time = end_time - start_time
 
         if winners:
+            # If there's a tie, randomly select one winner
+            if len(winners) > 1:
+                logger.info(f'Tie detected: {len(winners)} videos with {most_reactions} reactions each')
+                winner = random.choice(winners)
+                logger.info(f'Randomly selected winner: {winner["title"]}')
+                winners = [winner]
+
             logger.info(f'Winner of best video of the week computed in {log_time:.2f}s')
-            logger.info(f'Found {len(winners)} winner(s) with {most_reactions} reactions each')
+            logger.info(f'Final winner count: {len(winners)} with {most_reactions} reactions')
         else:
             logger.warning("No reactions found - Unable to calculate winner")
 
