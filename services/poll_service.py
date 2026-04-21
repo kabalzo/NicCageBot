@@ -68,7 +68,7 @@ class PollService:
         poll_window = self.bot.get_poll_window()
 
         # Create a Poll object
-        poll = discord.Poll(
+        """poll = discord.Poll(
             question="***Pick your days***?",
             duration=datetime.timedelta(hours=poll_window),  # Poll stays open for 24 hours
             multiple=True  # Allow multiple selections
@@ -84,6 +84,12 @@ class PollService:
         await send_channel.send(
             content=f"<@&{role_id}> **It's Movie Time!**",
             poll=poll
-        )
+        )"""
+        await send_channel.send(f"<@&{role_id}> **It's Movie Time!**")
+        #await send_channel.send(f"Wednesday")
+        await send_channel.send(f"Thursday")
+        await send_channel.send(f"Friday")
+        await send_channel.send(f"Saturday")
+        await send_channel.send(f"Sunday")
 
         logger.info(f'Movie poll sent')
