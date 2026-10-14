@@ -39,10 +39,10 @@ A feature-rich Discord bot that combines Nicolas Cage movie quotes, AI interacti
 - `/ask_gemini` - Google Gemini as Nicolas Cage
 - `/create_gemini` - Imagen image generation
 
-### 🍪 Cookie Tracking
-- `/cookie` - Log cookies eaten
-- `/mycookies` - Check your total
-- `/leaderboard` - Top cookie consumers
+### 🌮 Taco Tracking
+- `/taco` - Log tacos eaten
+- `/mytacos` - Check your total
+- `/leaderboard` - Top taco consumers
 
 ## 📋 Prerequisites
 
@@ -251,7 +251,7 @@ sudo journalctl -u nicbot -f
 
 SQLite databases (mode-specific):
 - `link_tracker_{mode}.db` - YouTube video tracking
-- `cookie_info_{mode}.db` - Cookie consumption data
+- `taco_info_{mode}.db` - Taco consumption data
 
 ## 🔧 Customization
 
