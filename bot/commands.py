@@ -8,7 +8,7 @@ import asyncio
 import logging
 from data.file_handlers import QuoteManager, LinkPatterns
 from services.ai_service import OpenAIService, GeminiService
-from data.database import CookieDatabase
+from data.database import TacoDatabase
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +19,8 @@ class BotCommands(commands.Cog):
         self.last_int = -1
         self.openai_service = OpenAIService()
         self.gemini_service = GeminiService()
-        # Pass the bot mode to the cookie database
-        self.cookie_db = CookieDatabase(mode=bot.config.mode)
+        # Pass the bot mode to the taco database
+        self.taco_db = TacoDatabase(mode=bot.config.mode)
         
 ########################################################################################################################################################
     @app_commands.command(name="help", description="Get the bot commands")
@@ -28,7 +28,7 @@ class BotCommands(commands.Cog):
         commands_list = [
             "/movieboys", "/winner", "/speak", "/join", "/qjoin", "/leave",
             "/qleave", "/ask_openai", "/ask_gemini", "/create_openai", 
-            "/create_gemini", "/vampire", "/face", "/gif", "/kill", "/cookie", "/leaderboard", "/mycookies"
+            "/create_gemini", "/vampire", "/face", "/gif", "/kill", "/taco", "/leaderboard", "/mytacos"
         ]
         await interaction.response.send_message("`" + "\n".join(commands_list) + "`")
     
@@ -273,67 +273,67 @@ class BotCommands(commands.Cog):
             await interaction.followup.send("I can't create those images right now. Try again later.")
     
 ########################################################################################################################################################
-    @app_commands.command(name="cookie", description="Track your cookies")
-    async def cookie(self, interaction: discord.Interaction, cookies: str):
+    @app_commands.command(name="taco", description="Track your tacos")
+    async def taco(self, interaction: discord.Interaction, tacos: str):
         try:
             # Acknowledge immediately to prevent timeout
-            await interaction.response.send_message("Tracking cookies...", ephemeral=False)
+            await interaction.response.send_message("Tracking tacos...", ephemeral=False)
             
-            num_cookies = int(cookies)
-            if num_cookies < 0:
-                await interaction.edit_original_response(content="You can't un-eat cookies! Well, maybe you can, but I don't want to know about it.")
+            num_tacos = int(tacos)
+            if num_tacos < 0:
+                await interaction.edit_original_response(content="You can't un-eat tacos! Well, maybe you can, but I don't want to know about it.")
                 return
                 
-            total_cookies = self.cookie_db.add_cookies(interaction.user.id, num_cookies)
+            total_tacos = self.taco_db.add_tacos(interaction.user.id, num_tacos)
             
-            # Create fun responses based on cookie count
-            if num_cookies == 0:
-                message = f"**{interaction.user}** is watching their figure. Zero cookies consumed. Total: {total_cookies}"
-            elif num_cookies == 1:
-                message = f"**{interaction.user}** had a single cookie. Moderation is key! Total: {total_cookies}"
-            elif num_cookies <= 3:
-                message = f"**{interaction.user}** enjoyed {num_cookies} cookies. A nice snack! Total: {total_cookies}"
-            elif num_cookies <= 6:
-                message = f"**{interaction.user}** gobbled {num_cookies} cookies. Someone's hungry! Total: {total_cookies}"
-            elif num_cookies <= 10:
-                message = f"**{interaction.user}** demolished {num_cookies} cookies. Cookie monster alert! Total: {total_cookies}"
-            elif num_cookies <= 20:
-                message = f"**{interaction.user}** crushed {num_cookies} cookies. Cookie :ocean: tsunami :ocean: Total: {total_cookies}"
-            elif num_cookies <= 50:
-                message = f"**{interaction.user}** consumed {num_cookies} cookies! 🚨 COOKIE EMERGENCY 🚨 Total: {total_cookies}"
+            # Create fun responses based on taco count
+            if num_tacos == 0:
+                message = f"**{interaction.user}** is watching their figure. Zero tacos consumed. Total: {total_tacos}"
+            elif num_tacos == 1:
+                message = f"**{interaction.user}** had a single taco. Moderation is key! Total: {total_tacos}"
+            elif num_tacos <= 3:
+                message = f"**{interaction.user}** enjoyed {num_tacos} tacos. A nice snack! Total: {total_tacos}"
+            elif num_tacos <= 6:
+                message = f"**{interaction.user}** gobbled {num_tacos} tacos. Someone's hungry! Total: {total_tacos}"
+            elif num_tacos <= 10:
+                message = f"**{interaction.user}** demolished {num_tacos} tacos. Taco Tuesday every day! Total: {total_tacos}"
+            elif num_tacos <= 20:
+                message = f"**{interaction.user}** crushed {num_tacos} tacos. Taco :ocean: tsunami :ocean: Total: {total_tacos}"
+            elif num_tacos <= 50:
+                message = f"**{interaction.user}** consumed {num_tacos} tacos! 🚨 TACO EMERGENCY 🚨 Total: {total_tacos}"
             else:
-                message = f"**{interaction.user}** gorged on {num_cookies} cookies...save some for the rest of us...Total: {total_cookies}"
+                message = f"**{interaction.user}** gorged on {num_tacos} tacos...save some for the rest of us...Total: {total_tacos}"
             
             embed = discord.Embed(
-                title=":cookie: Cookie Counter :cookie:",
+                title=":taco: Taco Counter :taco:",
                 description=message,
                 color=discord.Color.gold()
             )
             await interaction.edit_original_response(content=None, embed=embed)
             
         except ValueError:
-            await interaction.edit_original_response(content="Please enter a valid number of cookies.")
+            await interaction.edit_original_response(content="Please enter a valid number of tacos.")
         except Exception as e:
-            logger.error(f"Cookie tracking error: {e}")
-            await interaction.edit_original_response(content="Something went wrong with cookie tracking. Try again.")
+            logger.error(f"Taco tracking error: {e}")
+            await interaction.edit_original_response(content="Something went wrong with taco tracking. Try again.")
     
 ########################################################################################################################################################
-    @app_commands.command(name="leaderboard", description="Who's eaten the most cookies?")
+    @app_commands.command(name="leaderboard", description="Who's eaten the most tacos?")
     async def leaderboard(self, interaction: discord.Interaction):
         try:
-            await interaction.response.send_message("Fetching cookie leaderboard...", ephemeral=False)
+            await interaction.response.send_message("Fetching taco leaderboard...", ephemeral=False)
             
             # Handle DMs - leaderboard requires a guild context
             if interaction.guild is None:
-                await interaction.edit_original_response(content="The cookie leaderboard is only available in server channels since it shows server members.")
+                await interaction.edit_original_response(content="The taco leaderboard is only available in server channels since it shows server members.")
                 return
             
-            leaderboard_data = self.cookie_db.get_leaderboard(interaction.guild)
+            leaderboard_data = self.taco_db.get_leaderboard(interaction.guild)
             
             if not leaderboard_data:
                 embed = discord.Embed(
-                    title=":cookie: Cookie Leaderboard :cookie:",
-                    description="No cookies have been eaten yet! Someone grab a snack!",
+                    title=":taco: Taco Leaderboard :taco:",
+                    description="No tacos have been eaten yet! Someone grab a snack!",
                     color=discord.Color.gold()
                 )
                 await interaction.edit_original_response(content=None, embed=embed)
@@ -352,16 +352,16 @@ class BotCommands(commands.Cog):
                 elif i == 3:
                     rank_emoji = "🥉"
                 else:
-                    rank_emoji = "🍪"
+                    rank_emoji = "🌮"
                     
-                leaderboard_display.append(f"{rank_emoji} **{name}**: {total} cookies")
+                leaderboard_display.append(f"{rank_emoji} **{name}**: {total} tacos")
             
             embed = discord.Embed(
-                title=":cookie: Cookie Leaderboard :cookie:",
+                title=":taco: Taco Leaderboard :taco:",
                 description="\n".join(leaderboard_display),
                 color=discord.Color.gold()
             )
-            embed.set_footer(text="Keep eating those cookies!")
+            embed.set_footer(text="Keep eating those tacos!")
             await interaction.edit_original_response(content=None, embed=embed)
 
         except Exception as e:
@@ -369,41 +369,37 @@ class BotCommands(commands.Cog):
             await interaction.edit_original_response(content="Couldn't fetch the leaderboard right now. Try again later.")
 
 ########################################################################################################################################################
-    @app_commands.command(name="mycookies", description="Check how many cookies you've eaten")
-    async def mycookies(self, interaction: discord.Interaction):
+    @app_commands.command(name="mytacos", description="Check how many tacos you've eaten")
+    async def mytacos(self, interaction: discord.Interaction):
         try:
-            await interaction.response.send_message("Checking your cookies...", ephemeral=True)
+            await interaction.response.send_message("Checking your tacos...", ephemeral=True)
             
-            conn = self.cookie_db._get_connection()
-            cursor = conn.cursor()
-            cursor.execute("SELECT SUM(num_cookies) FROM cookies WHERE user_id = ?", (interaction.user.id,))
-            total_cookies = cursor.fetchone()[0] or 0
-            conn.close()
+            total_tacos = self.taco_db.get_total(interaction.user.id)
             
-            # Fun messages based on total cookies
-            if total_cookies == 0:
-                message = "You haven't eaten any cookies yet! What are you waiting for?"
-            elif total_cookies <= 10:
-                message = f"You've eaten {total_cookies} cookies. A good start!"
-            elif total_cookies <= 50:
-                message = f"You've consumed {total_cookies} cookies. You're getting there!"
-            elif total_cookies <= 100:
-                message = f"Wow! {total_cookies} cookies! You really love your snacks!"
-            elif total_cookies <= 200:
-                message = f"Amazing! {total_cookies} cookies! You're a cookie connoisseur!"
+            # Fun messages based on total tacos
+            if total_tacos == 0:
+                message = "You haven't eaten any tacos yet! What are you waiting for?"
+            elif total_tacos <= 10:
+                message = f"You've eaten {total_tacos} tacos. A good start!"
+            elif total_tacos <= 50:
+                message = f"You've consumed {total_tacos} tacos. You're getting there!"
+            elif total_tacos <= 100:
+                message = f"Wow! {total_tacos} tacos! You really love your snacks!"
+            elif total_tacos <= 200:
+                message = f"Amazing! {total_tacos} tacos! You're a taco connoisseur!"
             else:
-                message = f"INCREDIBLE! {total_cookies} cookies! You are the Cookie Master! 🍪👑"
+                message = f"INCREDIBLE! {total_tacos} tacos! You are the Taco Master! 🌮👑"
             
             embed = discord.Embed(
-                title=f"{interaction.user.display_name}'s Cookie Stats",
+                title=f"{interaction.user.display_name}'s Taco Stats",
                 description=message,
                 color=discord.Color.gold()
             )
             await interaction.edit_original_response(content=None, embed=embed)
 
         except Exception as e:
-            logger.error(f"MyCookies error: {e}")
-            await interaction.edit_original_response(content="Couldn't fetch your cookie stats. Try again later.")
+            logger.error(f"MyTacos error: {e}")
+            await interaction.edit_original_response(content="Couldn't fetch your taco stats. Try again later.")
 
 ########################################################################################################################################################
     @app_commands.command(name="test_poll", description="Test poll integration")

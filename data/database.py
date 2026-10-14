@@ -6,11 +6,11 @@ from datetime import timezone
 
 logger = logging.getLogger(__name__)
 
-class CookieDatabase:
+class TacoDatabase:
     def __init__(self, db_path=None, mode="prod"):
         if db_path is None:
             # Use mode-specific database file
-            db_path = f"data/cookie_info_{mode}.db"
+            db_path = f"data/taco_info_{mode}.db"
         self.db_path = db_path
         self._init_db()
     
@@ -18,10 +18,10 @@ class CookieDatabase:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS cookies(
+            CREATE TABLE IF NOT EXISTS tacos(
                 id INTEGER PRIMARY KEY, 
                 user_id INTEGER, 
-                num_cookies INTEGER, 
+                num_tacos INTEGER, 
                 date TEXT
             )
         """)
@@ -31,35 +31,43 @@ class CookieDatabase:
     def _get_connection(self):
         return sqlite3.connect(self.db_path)
 
-    def add_cookies(self, user_id, num_cookies):
+    def add_tacos(self, user_id, num_tacos):
         conn = self._get_connection()
         cursor = conn.cursor()
         
         current_date = str(datetime.datetime.now())
         cursor.execute(
-            "INSERT INTO cookies (user_id, num_cookies, date) VALUES (?, ?, ?)",
-            (user_id, num_cookies, current_date)
+            "INSERT INTO tacos (user_id, num_tacos, date) VALUES (?, ?, ?)",
+            (user_id, num_tacos, current_date)
         )
         
         cursor.execute(
-            "SELECT SUM(num_cookies) FROM cookies WHERE user_id = ?", 
+            "SELECT SUM(num_tacos) FROM tacos WHERE user_id = ?", 
             (user_id,)
         )
-        total_cookies = cursor.fetchone()[0] or 0
+        total_tacos = cursor.fetchone()[0] or 0
         
         conn.commit()
         conn.close()
-        return total_cookies
+        return total_tacos
+    
+    def get_total(self, user_id):
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT SUM(num_tacos) FROM tacos WHERE user_id = ?", (user_id,))
+        total_tacos = cursor.fetchone()[0] or 0
+        conn.close()
+        return total_tacos
     
     def get_leaderboard(self, guild):
         conn = self._get_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT user_id, SUM(num_cookies) AS total_cookies
-            FROM cookies
+            SELECT user_id, SUM(num_tacos) AS total_tacos
+            FROM tacos
             GROUP BY user_id
-            ORDER BY total_cookies DESC
+            ORDER BY total_tacos DESC
         """)
         leaderboard = cursor.fetchall()
         conn.close()
